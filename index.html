@@ -3959,6 +3959,13 @@ function timeToMinutes(timeStr) {
     return h * 60 + m;
 }
 
+function parseDate(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+}
+
 function calculateOccupancyAnalytics(startDate, endDate) {
     const courtData = {};
     const hourlyUsage = {};
