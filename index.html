@@ -2874,7 +2874,6 @@ function closeAllActivities() {
     
     // Mostrar notificação
     showToast("Todas as atividades encerradas automaticamente às 22:00!", "info");
-    console.log("Todas as atividades encerradas automaticamente às 22:00");
 }
 
 function connectFirebase() {
@@ -2895,7 +2894,6 @@ function connectFirebase() {
         firebaseDb.ref('rq_state').on('value', (snapshot) => {
             const cloudData = snapshot.val();
             if (cloudData && !isCloudSyncing) {
-                console.log("Sincronizando da nuvem...");
                 state.courts = cloudData.courts || state.courts;
                 state.bookings = Array.isArray(cloudData.bookings) ? cloudData.bookings : Object.values(cloudData.bookings || {});
                 state.waitlist = Array.isArray(cloudData.waitlist) ? cloudData.waitlist : Object.values(cloudData.waitlist || {});
@@ -2911,7 +2909,6 @@ function connectFirebase() {
                 
                 saveLocal(); 
                 render();
-                console.log("Estado atualizado via Nuvem!");
             }
         });
 
@@ -4897,7 +4894,6 @@ async function syncInternetTime() {
             _syncIndicatorEl().title = 'Horário sincronizado com a internet';
             _syncIndicatorEl().classList.replace('text-gray-500','text-emerald-400');
         }
-        console.log(`[Clock] Sincronizado: offset=${_timeOffset}ms`);
     } catch(e) {
         // Fallback: worldtimeapi
         try {
@@ -5130,7 +5126,7 @@ function initTennis3D() {
     animate();
 }
 
-try { console.log("ReservaQuadras Pro Iniciado."); initTennis3D(); } catch (e) { console.error("Erro na inicialização:", e); }
+try { initTennis3D(); } catch (e) { console.error("Erro na inicialização:", e); }
 
 // ============================================================
 // TAREFA F — Reversão de atividade encerrada
