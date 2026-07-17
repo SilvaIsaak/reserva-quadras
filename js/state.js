@@ -1,3 +1,5 @@
+// NÃO CONECTADO AO index.html — referência para modularização futura, ver prompt-reorganizacao-reservaquadras.md
+
 // --- Safe LocalStorage Wrapper ---
 export const storage = {
     get: (key, fallback) => {
@@ -31,7 +33,7 @@ export const storage = {
     }
 };
 
-// --- State ---
+// --- State & Config ---
 export let state = {
     courts: storage.get('rq_pro_courts', ["Quadra 1", "Quadra 2", "Quadra 3", "Quadra 4", "Quadra 5", "Quadra 6", "Quadra 7", "Quadra Rápida"]),
     bookings: storage.get('rq_pro_bookings', []),
@@ -55,6 +57,52 @@ export let state = {
     manuallyReleasedLessons: storage.get('rq_pro_manually_released', [])
 };
 
+// ============================================================
+// SISTEMA DE USUÁRIOS — 3 perfis: publico, diretora, esportes
+// ============================================================
+export const USER_PASSWORDS = {
+    publico:  null,
+    diretora: 'diretora',
+    esportes: 'esportes'
+};
+
+export const USER_ROLES = {
+    publico:  { label: 'Público',  icon: 'fas fa-users',        color: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', views: ['public'] },
+    diretora: { label: 'Diretora', icon: 'fas fa-chart-pie',    color: 'bg-purple-500/10 border-purple-500/30 text-purple-400',   views: ['home'] },
+    esportes: { label: 'Esportes', icon: 'fas fa-shield-halved', color: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400',  views: ['home', 'public', 'admin', 'settings'] }
+};
+
+export let currentUser = null;
+export let selectedUserForLogin = null;
+
+// Carrega senhas salvas no localStorage (se houver)
+export function loadSavedPasswords() {
+    const saved = storage.get('rq_user_passwords');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (parsed.esportes) USER_PASSWORDS.esportes = parsed.esportes;
+            if (parsed.diretora) USER_PASSWORDS.diretora = parsed.diretora;
+        } catch(e) {}
+    }
+}
+loadSavedPasswords();
+
+export let pwdTargetUser = null;
+
+export const HARDCODED_FIREBASE_CONFIG = { 
+    "apiKey": "AIzaSyDta2ReINHNdfsyqma8zrPqUuR40gXEyw8", 
+    "authDomain": "reserva-de-quadras-ff122.firebaseapp.com", 
+    "projectId": "reserva-de-quadras-ff122", 
+    "storageBucket": "reserva-de-quadras-ff122.firebasestorage.app", 
+    "messagingSenderId": "535600657201", 
+    "appId": "1:535600657201:web:d3997814a9ebdec8237610" 
+};
+
+state.settings.firebaseConfig = HARDCODED_FIREBASE_CONFIG;
+
+export let lastClosingDate = storage.get('last_closing_date') || '';
+
 export function saveLocal() {
     storage.set('rq_pro_courts', state.courts);
     storage.set('rq_pro_bookings', state.bookings);
@@ -65,6 +113,3 @@ export function saveLocal() {
     storage.set('rq_pro_settings', state.settings);
     storage.set('rq_pro_manually_released', state.manuallyReleasedLessons);
 }
-
-// Para evitar dependência circular, a função save será definida no firebase.js ou main.js
-// e poderá ser importada onde necessário.

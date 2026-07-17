@@ -1,3 +1,5 @@
+// NÃO CONECTADO AO index.html — referência para modularização futura, ver prompt-reorganizacao-reservaquadras.md
+
 import { state } from './state.js';
 import { getFixedStatus, getNextTransition, timeToMinutes } from './schedules.js';
 import { getTodayDate, showToast, parseDate } from './utils.js';

@@ -1,32 +1,31 @@
+// NÃO CONECTADO AO index.html — referência para modularização futura, ver prompt-reorganizacao-reservaquadras.md
+
 import { state, saveLocal } from './state.js';
+import { showToast } from './utils.js';
 
 export let firebaseApp = null;
 export let firebaseDb = null;
 export let isCloudSyncing = false;
 
-const HARDCODED_FIREBASE_CONFIG = { 
-    "apiKey": "AIzaSyDta2ReINHNdfsyqma8zrPqUuR40gXEyw8", 
-    "authDomain": "reserva-de-quadras-ff122.firebaseapp.com", 
-    "projectId": "reserva-de-quadras-ff122", 
-    "storageBucket": "reserva-de-quadras-ff122.firebasestorage.app", 
-    "messagingSenderId": "535600657201", 
-    "appId": "1:535600657201:web:d3997814a9ebdec8237610" 
-};
-
-state.settings.firebaseConfig = HARDCODED_FIREBASE_CONFIG;
-
-export function connectFirebase(renderCallback) {
-    if (!state.settings.firebaseConfig) return;
+export function connectFirebase() {
+    if (!state.settings.firebaseConfig) {
+        showToast("Cole sua configuração do Firebase primeiro!", "warning");
+        return;
+    }
 
     try {
-        if (firebaseApp) firebaseApp.delete();
+        if (firebaseApp) {
+            firebaseApp.delete();
+        }
         
         firebaseApp = firebase.initializeApp(state.settings.firebaseConfig);
-        firebaseDb = firebase.database();
+        firebaseDb = firebase.database(firebaseApp);
+        const statusEl = document.getElementById('cloud-status');
         
         firebaseDb.ref('rq_state').on('value', (snapshot) => {
             const cloudData = snapshot.val();
             if (cloudData && !isCloudSyncing) {
+                console.log("Sincronizando da nuvem...");
                 state.courts = cloudData.courts || state.courts;
                 state.bookings = Array.isArray(cloudData.bookings) ? cloudData.bookings : Object.values(cloudData.bookings || {});
                 state.waitlist = Array.isArray(cloudData.waitlist) ? cloudData.waitlist : Object.values(cloudData.waitlist || {});
@@ -41,11 +40,19 @@ export function connectFirebase(renderCallback) {
                 }
                 
                 saveLocal(); 
-                if (renderCallback) renderCallback();
+                render();
+                console.log("Estado atualizado via Nuvem!");
             }
         });
+
+        if(statusEl) {
+            statusEl.innerText = "CONECTADO";
+            statusEl.classList.replace('text-gray-500', 'text-emerald-400');
+        }
+        showToast("Conectado à Nuvem!", "success");
     } catch (err) {
-        console.error("Firebase connection error:", err);
+        console.error(err);
+        showToast("Erro ao conectar ao Firebase!", "error");
     }
 }
 
@@ -53,6 +60,7 @@ export function save() {
     saveLocal();
     if (firebaseDb) {
         isCloudSyncing = true;
+        
         const sanitizedData = JSON.parse(JSON.stringify({
             courts: state.courts,
             bookings: state.bookings,

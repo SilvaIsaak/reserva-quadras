@@ -1,2401 +1,4 @@
-<!DOCTYPE html>
-<html lang="pt-br" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReservaQuadras Pro v8 | Gestão de Elite</title>
-    <link rel="icon" href="data:,">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    
-    <!-- Firebase SDK (Cloud Sync) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-
-:root {
-    --primary: #6366f1;
-    --primary-glow: rgba(99, 102, 241, 0.4);
-    --bg-body: #0b0f1a;
-    --bg-mesh-1: #1e1b4b;
-    --bg-mesh-2: #312e81;
-    --bg-mesh-3: #020617;
-    --card-bg: rgba(255, 255, 255, 0.03);
-    --card-border: rgba(255, 255, 255, 0.08);
-    --modal-bg: #0f172a;
-    --modal-border: rgba(255, 255, 255, 0.1);
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-soft: #cbd5e1;
-    --text-faint: #64748b;
-    --nav-bg: rgba(11, 15, 26, 0.6);
-    /* Contraste para labels e metadados no dark */
-    --label-color: #94a3b8;
-    --label-bg: rgba(255,255,255,0.04);
-    --input-bg: rgba(255, 255, 255, 0.05);
-    --input-border: rgba(255, 255, 255, 0.1);
-    --input-text: #f1f5f9;
-    --divider: rgba(255,255,255,0.06);
-    --stat-value-color: #f8fafc;
-    --badge-text: #e2e8f0;
-    --card-text-secondary: #94a3b8;
-}
-
-[data-theme="light"] {
-    --bg-body: #f1f5f9;
-    --bg-mesh-1: #e0e7ff;
-    --bg-mesh-2: #c7d2fe;
-    --bg-mesh-3: #f8fafc;
-    --card-bg: rgba(255, 255, 255, 0.85);
-    --card-border: rgba(99, 102, 241, 0.15);
-    --modal-bg: #ffffff;
-    --modal-border: #cbd5e1;
-    --text-main: #0f172a;
-    --text-muted: #475569;
-    --text-soft: #334155;
-    --text-faint: #64748b;
-    --nav-bg: rgba(255, 255, 255, 0.9);
-    /* Contraste para labels e metadados no light */
-    --label-color: #475569;
-    --label-bg: rgba(99,102,241,0.06);
-    --input-bg: rgba(15, 23, 42, 0.04);
-    --input-border: rgba(99, 102, 241, 0.2);
-    --input-text: #0f172a;
-    --divider: rgba(15,23,42,0.08);
-    --stat-value-color: #0f172a;
-    --badge-text: #1e293b;
-    --card-text-secondary: #475569;
-}
-
-/* ===================================================
-   CORREÇÕES GLOBAIS DE CONTRASTE — DARK & LIGHT
-   =================================================== */
-
-/* Textos que eram white/gray hardcoded — agora adaptam ao tema */
-[data-theme="light"] .text-white {
-    color: #0f172a !important;
-}
-[data-theme="light"] .text-gray-400 {
-    color: #475569 !important;
-}
-[data-theme="light"] .text-gray-500 {
-    color: #64748b !important;
-}
-[data-theme="light"] .text-gray-300 {
-    color: #334155 !important;
-}
-[data-theme="light"] .text-gray-200 {
-    color: #1e293b !important;
-}
-
-/* Nav links no light */
-[data-theme="light"] nav {
-    box-shadow: 0 1px 0 rgba(15,23,42,0.08);
-}
-[data-theme="light"] .nav-link {
-    color: #475569;
-}
-[data-theme="light"] .nav-link:hover,
-[data-theme="light"] .nav-link.active {
-    color: #0f172a;
-}
-
-/* Glass cards — no light ficam brancas sólidas com sombra leve */
-[data-theme="light"] .glass-card {
-    background: rgba(255,255,255,0.9);
-    border-color: rgba(99,102,241,0.12);
-    box-shadow: 0 4px 24px rgba(15,23,42,0.08);
-}
-[data-theme="light"] .glass-card:hover {
-    box-shadow: 0 8px 32px rgba(99,102,241,0.15);
-}
-
-/* Inputs no modo light */
-[data-theme="light"] .input-glass {
-    background: rgba(15,23,42,0.04);
-    border-color: rgba(99,102,241,0.2);
-    color: #0f172a;
-}
-[data-theme="light"] .input-glass:focus {
-    background: #ffffff;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
-}
-[data-theme="light"] .input-glass::placeholder {
-    color: #94a3b8;
-}
-
-/* Status badges no light (texto branco fica ilegível sobre fundo claro) */
-[data-theme="light"] .status-blocked,
-[data-theme="light"] .status-lesson,
-[data-theme="light"] .status-tournament,
-[data-theme="light"] .status-rain {
-    color: #fff !important;
-}
-
-/* Modal fix no light */
-[data-theme="light"] .modal-theme-fix {
-    background: #ffffff;
-    color: #0f172a;
-}
-[data-theme="light"] #booking-form,
-[data-theme="light"] #edit-form {
-    background: #f8fafc;
-}
-
-/* Borders semitransparentes no light */
-[data-theme="light"] .border-white\/5 { border-color: rgba(15,23,42,0.06) !important; }
-[data-theme="light"] .border-white\/10 { border-color: rgba(15,23,42,0.1) !important; }
-[data-theme="light"] .border-white\/20 { border-color: rgba(15,23,42,0.14) !important; }
-
-/* Backgrounds semitransparentes no light */
-[data-theme="light"] .bg-white\/5 { background: rgba(15,23,42,0.03) !important; }
-[data-theme="light"] .bg-white\/10 { background: rgba(15,23,42,0.06) !important; }
-[data-theme="light"] .bg-black\/10 { background: rgba(15,23,42,0.04) !important; }
-
-/* Skeleton loader no light */
-[data-theme="light"] .skeleton {
-    background: linear-gradient(90deg,
-        rgba(15,23,42,0.06) 25%,
-        rgba(15,23,42,0.12) 50%,
-        rgba(15,23,42,0.06) 75%);
-    background-size: 200% 100%;
-}
-
-/* Scrollbar no light */
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-    background: rgba(15,23,42,0.15);
-}
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-    background: rgba(15,23,42,0.25);
-}
-
-/* Texto da nav-bar no light */
-[data-theme="light"] #brand-name { color: #0f172a; }
-
-/* .text-label — labels pequenos uppercase */
-.text-label {
-    font-size: 0.625rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--label-color);
-}
-
-/* .stat-value — números grandes dos KPIs */
-.stat-value {
-    font-size: 1.875rem;
-    font-weight: 800;
-    color: var(--stat-value-color);
-}
-
-/* Fundo do mobile menu no light */
-[data-theme="light"] #mobile-menu {
-    background: rgba(255,255,255,0.97);
-    border-color: rgba(15,23,42,0.1);
-}
-
-/* Base resets & Typography */
-* {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    -webkit-tap-highlight-color: transparent;
-}
-
-body {
-    background: var(--bg-body);
-    color: var(--text-main);
-    overflow-x: hidden;
-    letter-spacing: -0.01em;
-    transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Glassmorphism Standard */
-.glass-card {
-    background: var(--card-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--card-border);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--primary);
-    box-shadow: 0 12px 40px -10px var(--primary-glow);
-}
-
-.glass-card:active {
-    transform: translateY(-2px) scale(0.98);
-}
-
-/* Micro-interactions */
-.btn-hover-effect {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-hover-effect:hover {
-    transform: scale(1.02);
-    filter: brightness(1.1);
-}
-
-.btn-hover-effect:active {
-    transform: scale(0.96);
-}
-
-/* Responsividade Mobile-First */
-main {
-    padding: 0.5rem;
-    width: 100%;
-    overflow-x: hidden;
-}
-
-@media (min-width: 375px) {
-    main { padding: 0.75rem; }
-}
-
-@media (min-width: 480px) {
-    main { padding: 1rem; }
-}
-
-@media (min-width: 640px) {
-    main { padding: 1.25rem; }
-}
-
-@media (min-width: 768px) {
-    main { padding: 1.5rem; }
-}
-
-@media (min-width: 1024px) {
-    main { padding: 2rem; }
-}
-
-@media (min-width: 1280px) {
-    main { padding: 2.5rem; }
-}
-
-/* Responsividade de Grid */
-.responsive-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-}
-
-@media (max-width: 640px) {
-    .responsive-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Responsividade de Flex */
-.responsive-flex {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-@media (max-width: 640px) {
-    .responsive-flex {
-        flex-direction: column;
-    }
-}
-
-/* Textos responsivos */
-.text-responsive {
-    font-size: clamp(0.875rem, 2vw, 1.125rem);
-}
-
-.text-responsive-sm {
-    font-size: clamp(0.75rem, 1.5vw, 0.875rem);
-}
-
-/* Padding responsivo */
-.p-responsive {
-    padding: clamp(0.5rem, 3vw, 1.5rem);
-}
-
-/* Ícones responsivos */
-.icon-responsive {
-    width: clamp(1.25rem, 5vw, 2rem);
-    height: clamp(1.25rem, 5vw, 2rem);
-}
-
-/* Botões responsivos */
-.btn-responsive {
-    padding: clamp(0.5rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem);
-    font-size: clamp(0.7rem, 1.5vw, 0.875rem);
-    min-height: 44px;
-    min-width: 44px;
-}
-
-/* Cards responsivos */
-.card-responsive {
-    padding: clamp(1rem, 3vw, 1.5rem);
-    border-radius: clamp(0.75rem, 2vw, 1.5rem);
-}
-
-/* Modals responsivos */
-@media (max-width: 640px) {
-    .modal-theme-fix {
-        max-width: 95vw !important;
-        max-height: 90vh !important;
-        border-radius: 1rem !important;
-    }
-}
-
-/* Scrollbar responsivo */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-    background: rgba(15, 23, 42, 0.2);
-}
-
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-    background: rgba(15, 23, 42, 0.3);
-}
-
-/* Toast container — fixado abaixo da nav, canto superior direito */
-#toast-container {
-    position: fixed;
-    top: 5rem; /* abaixo da navbar (~64px) */
-    right: 1.25rem;
-    z-index: 90; /* abaixo da nav (z-100) e modais (z-1000), mas acima do conteúdo */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    pointer-events: none;
-    max-width: min(90vw, 420px);
-}
-#toast-container > * {
-    pointer-events: auto;
-}
-
-/* Em mobile, centraliza na parte inferior acima da bottom nav */
-@media (max-width: 767px) {
-    #toast-container {
-        top: auto;
-        bottom: 5.5rem;
-        right: 0.75rem;
-        left: 0.75rem;
-        align-items: stretch;
-        max-width: 100%;
-    }
-}
-
-/* Fluid typography */
-.text-responsive-h1 {
-    font-size: clamp(1.4rem, 5vw, 3rem);
-}
-.text-responsive-h2 {
-    font-size: clamp(1.1rem, 3.5vw, 2rem);
-}
-
-
-
-/* Touch-friendly tap targets */
-@media (max-width: 767px) {
-    .btn-touch {
-        min-height: 44px;
-        min-width: 44px;
-    }
-    .glass-card:hover {
-        transform: none;
-    }
-    button, .btn-hover-effect {
-        -webkit-tap-highlight-color: rgba(99,102,241,0.2);
-    }
-    /* Prevent modal overflow on small screens */
-    .modal-theme-fix {
-        max-height: 95dvh;
-        overflow-y: auto;
-    }
-    /* Tighter spacing for mobile */
-    .space-y-8 { --tw-space-y-reverse: 0; margin-top: calc(1.25rem * calc(1 - var(--tw-space-y-reverse))); margin-bottom: calc(1.25rem * var(--tw-space-y-reverse)); }
-    .space-y-12 { --tw-space-y-reverse: 0; margin-top: calc(2rem * calc(1 - var(--tw-space-y-reverse))); margin-bottom: calc(2rem * var(--tw-space-y-reverse)); }
-}
-
-/* Settings Sub-tabs */
-.settings-tab-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    padding: 0.5rem 0.6rem;
-    border-radius: 0.75rem;
-    font-weight: 700;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    transition: all 0.25s ease;
-    cursor: pointer;
-    border: 1px solid transparent;
-    color: var(--text-muted);
-    background: transparent;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
-}
-
-@media (min-width: 480px) {
-    .settings-tab-btn {
-        padding: 0.6rem 1rem;
-        font-size: 0.65rem;
-        gap: 0.5rem;
-    }
-}
-
-.settings-tab-btn span.tab-label {
-    display: none;
-}
-@media (min-width: 360px) {
-    .settings-tab-btn span.tab-label { display: inline; }
-}
-
-.settings-tab-btn:hover {
-    background: rgba(255,255,255,0.05);
-    color: var(--text-main);
-}
-
-.settings-tab-btn.active {
-    background: rgba(99,102,241,0.15);
-    border-color: rgba(99,102,241,0.35);
-    color: #818cf8;
-}
-
-[data-theme="light"] .settings-tab-btn.active {
-    background: rgba(99,102,241,0.1);
-    border-color: rgba(99,102,241,0.3);
-    color: #4f46e5;
-}
-
-.settings-panel { display: none; }
-.settings-panel.active { display: block; }
-
-/* Lesson Tab Styles */
-.lesson-tab-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.75rem;
-    font-weight: 700;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    transition: all 0.25s ease;
-    cursor: pointer;
-    border: 1px solid transparent;
-    color: var(--text-muted);
-    background: transparent;
-    white-space: nowrap;
-}
-
-.lesson-tab-btn:hover {
-    background: rgba(255,255,255,0.05);
-    color: var(--text-main);
-}
-
-.lesson-tab-btn.active {
-    background: rgba(99,102,241,0.15);
-    border-color: rgba(99,102,241,0.35);
-    color: #818cf8;
-}
-
-[data-theme="light"] .lesson-tab-btn.active {
-    background: rgba(99,102,241,0.1);
-    border-color: rgba(99,102,241,0.3);
-    color: #4f46e5;
-}
-
-.lesson-tab-content { display: none; }
-.lesson-tab-content.active { display: block; }
-
-/* Lesson schedule editor */
-.lesson-court-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.875rem 1rem;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 1rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.lesson-court-header:hover {
-    background: rgba(99,102,241,0.08);
-    border-color: rgba(99,102,241,0.2);
-}
-[data-theme="light"] .lesson-court-header {
-    background: rgba(15,23,42,0.04);
-    border-color: rgba(99,102,241,0.12);
-}
-
-.lesson-schedule-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 0.5rem;
-    align-items: center;
-    padding: 0.5rem;
-    background: rgba(255,255,255,0.02);
-    border-radius: 0.75rem;
-    border: 1px solid rgba(255,255,255,0.05);
-    margin-bottom: 0.4rem;
-}
-@media (max-width: 480px) {
-    .lesson-schedule-row {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.4rem;
-    }
-    .lesson-schedule-row .row-status { grid-column: 1 / -2; }
-    .lesson-schedule-row .row-delete { grid-column: -1; grid-row: 1; }
-}
-[data-theme="light"] .lesson-schedule-row {
-    background: rgba(15,23,42,0.03);
-    border-color: rgba(15,23,42,0.08);
-}
-
-/* Day pills */
-.day-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.6rem;
-    height: 1.6rem;
-    border-radius: 50%;
-    font-size: 0.55rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all 0.15s;
-    border: 1px solid transparent;
-    background: rgba(255,255,255,0.06);
-    color: var(--text-muted);
-}
-.day-pill.selected {
-    background: var(--primary);
-    color: #fff;
-    border-color: var(--primary);
-}
-.day-pill:hover { opacity: 0.8; }
-
-/* ============================================================
-   SISTEMA DE NAV COMPLETAMENTE RESPONSIVO
-   PC (≥768px): nav horizontal com links + ações
-   Tablet (480-767px): links compactos ou ícones + bottom nav
-   Mobile (<480px): apenas logo + ações mínimas + bottom nav
-   ============================================================ */
-
-/* ── Elementos da nav com comportamento responsivo ── */
-
-/* Brand text: visível em ≥360px */
-.nav-brand-text { display: none; }
-@media (min-width: 360px) { .nav-brand-text { display: block; } }
-
-/* Links centrais: ocultos <768px (a bottom nav substitui) */
-.nav-links-center {
-    display: none;
-    align-items: center;
-    gap: 1rem;
-    flex: 1;
-    justify-content: center;
-}
-@media (min-width: 768px) {
-    .nav-links-center {
-        display: flex;
-        gap: 1.5rem;
-    }
-}
-@media (min-width: 1024px) {
-    .nav-links-center { gap: 2.5rem; }
-}
-
-/* nav-link refinado */
-.nav-link {
-    position: relative;
-    padding: 0.4rem 0;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    transition: color 0.2s ease;
-    white-space: nowrap;
-    background: none;
-    border: none;
-    cursor: pointer;
-}
-@media (min-width: 1024px) { .nav-link { font-size: 0.8rem; } }
-.nav-link:hover, .nav-link.active { color: var(--text-main); }
-.nav-link::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0;
-    width: 0; height: 2px;
-    background: var(--primary);
-    transition: width 0.3s ease;
-}
-.nav-link.active::after { width: 100%; }
-
-/* Botão ícone da nav */
-.nav-icon-btn {
-    width: 2rem; height: 2rem;
-    border-radius: 0.625rem;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-.nav-icon-btn:hover { background: rgba(255,255,255,0.1); }
-.nav-logout-btn:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); }
-.nav-logout-btn:hover i { color: #f87171 !important; }
-
-/* Role badge */
-.nav-role-badge {
-    display: none;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.625rem;
-    border-radius: 999px;
-    border: 1px solid;
-    white-space: nowrap;
-}
-@media (min-width: 480px) { .nav-role-badge { display: flex; } }
-
-/* Label do role: oculta em telas estreitas */
-.nav-role-label { display: none; }
-@media (min-width: 640px) { .nav-role-label { display: inline; } }
-
-/* Online dot */
-.nav-online-dot {
-    display: none;
-    align-items: center;
-    gap: 0.25rem;
-}
-@media (min-width: 640px) { .nav-online-dot { display: flex; } }
-.nav-online-label { display: none; }
-@media (min-width: 768px) { .nav-online-label { display: inline; } }
-
-/* ── Bottom nav mobile ── */
-#mobile-bottom-nav {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    z-index: 200;
-    background: var(--modal-bg);
-    border-top: 1px solid rgba(255,255,255,0.08);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    padding: 0.4rem 0.5rem;
-    padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
-    gap: 0;
-    /* oculto por padrão; JS/media queries ativam */
-    display: none;
-}
-
-/* Mostrar bottom nav em mobile/tablet (<768px) */
-@media (max-width: 767px) {
-    #mobile-bottom-nav { display: flex; }
-    main { padding-bottom: 5rem; }
-}
-
-/* Ocultar bottom nav em desktop */
-@media (min-width: 768px) {
-    #mobile-bottom-nav { display: none !important; }
-    main { padding-bottom: 1rem; }
-}
-
-[data-theme="light"] #mobile-bottom-nav {
-    background: rgba(255,255,255,0.97);
-    border-top-color: rgba(15,23,42,0.1);
-}
-
-.bottom-nav-btn {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.2rem;
-    padding: 0.35rem 0.25rem;
-    border-radius: 0.625rem;
-    font-size: 0.48rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    transition: all 0.2s ease;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    min-width: 0;
-}
-.bottom-nav-btn i {
-    font-size: 1.15rem;
-    transition: transform 0.2s ease;
-    display: block;
-    line-height: 1;
-}
-.bottom-nav-btn span {
-    display: block;
-    line-height: 1;
-    margin-top: 0.1rem;
-}
-.bottom-nav-btn.active { color: var(--primary); }
-.bottom-nav-btn.active i { transform: scale(1.15); }
-
-/* Garantir que ícones Font Awesome sempre aparecem */
-.bottom-nav-btn i::before { display: block !important; }
-
-/* ── Fix modais: Tailwind "hidden" sobrescreve "flex"; quando hidden é removido
-   o display volta a block. Forçamos flex em todos os modais fixed quando visíveis ── */
-#booking-modal:not(.hidden),
-#admin-modal:not(.hidden),
-#edit-modal:not(.hidden),
-#move-modal:not(.hidden),
-#waitlist-edit-modal:not(.hidden),
-#undo-modal:not(.hidden),
-#release-lesson-modal:not(.hidden),
-#password-modal:not(.hidden) {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ── Fix sidebar sócios em mobile ── */
-#members-sidebar:not(.hidden) {
-    display: block !important;
-}
-#members-sidebar-panel {
-    will-change: transform;
-}
-@media (max-width: 599px) {
-    #members-sidebar-panel {
-        max-width: 100vw !important;
-        width: 100vw !important;
-        border-radius: 0 !important;
-    }
-}
-
-/* Fix modals — responsivo */
-.modal-theme-fix {
-    max-width: min(95vw, 480px);
-    max-height: 92dvh;
-    overflow-y: auto;
-    border-radius: clamp(1rem, 3vw, 1.75rem) !important;
-}
-@media (max-width: 640px) {
-    .modal-theme-fix {
-        max-width: 96vw;
-        max-height: 88dvh;
-        border-radius: 1.25rem !important;
-        margin: 0.5rem;
-    }
-}
-
-/* ── Typography totalmente fluida com clamp() ── */
-h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
-
-.text-responsive-h1 { font-size: clamp(1.5rem, 5vw, 3.75rem); }
-.text-responsive-h2 { font-size: clamp(1.2rem, 3.5vw, 2.25rem); }
-.stat-value         { font-size: clamp(1.4rem, 4vw, 1.875rem); font-weight: 800; color: var(--stat-value-color); }
-
-/* Inputs & Focus */
-.input-glass {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-main);
-    transition: all 0.3s ease;
-    color-scheme: dark;
-}
-
-.input-glass:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
-}
-
-/* Dropdown nativo dos <select> — tema dark */
-select.input-glass option {
-    background: #1e1b4b;
-    color: #f1f5f9;
-}
-select.input-glass option:checked,
-select.input-glass option:hover {
-    background: #4f46e5;
-    color: #ffffff;
-}
-
-/* Dropdown nativo dos <select> — tema light */
-[data-theme="light"] select.input-glass {
-    color-scheme: light;
-}
-[data-theme="light"] select.input-glass option {
-    background: #ffffff;
-    color: #0f172a;
-}
-[data-theme="light"] select.input-glass option:checked {
-    background: #6366f1;
-    color: #ffffff;
-}
-
-/* Mobile Menu Animation */
-#mobile-menu {
-    transform: translateY(-100%);
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
-    opacity: 0;
-}
-
-#mobile-menu.open {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-/* Skeleton Loader */
-.skeleton {
-    background: linear-gradient(90deg, 
-        rgba(255, 255, 255, 0.03) 25%, 
-        rgba(255, 255, 255, 0.08) 50%, 
-        rgba(255, 255, 255, 0.03) 75%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
-    border-radius: 0.75rem;
-}
-
-@keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-/* Grid System — auto-fit inteligente */
-.responsive-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-    gap: clamp(0.6rem, 2vw, 1.25rem);
-}
-
-/* Scrollbar customization */
-::-webkit-scrollbar {
-    width: 6px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Specific component fixes */
-/* nav-link: ver bloco 'SISTEMA DE NAV COMPLETAMENTE RESPONSIVO' */
-
-/* Fix for horizontal scroll */
-.container {
-    width: 100%;
-    max-width: 1280px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Animation utilities */
-.view {
-    will-change: transform, opacity;
-}
-
-/* 3D Tennis Background */
-#tennis-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -2;
-    pointer-events: none;
-    display: none;
-}
-
-#glass-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    backdrop-filter: blur(8px) saturate(180%);
-    background: rgba(15, 23, 42, 0.4);
-    pointer-events: none;
-    display: none;
-}
-
-.mesh-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    background: 
-        radial-gradient(circle at 0% 0%, var(--bg-mesh-1) 0%, transparent 50%),
-        radial-gradient(circle at 100% 100%, var(--bg-mesh-2) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, var(--bg-mesh-3) 0%, transparent 100%);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-}
-
-.status-blocked { background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%) !important; color: #fff !important; }
-.status-lesson { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%) !important; color: #fff !important; }
-.status-tournament { background: linear-gradient(135deg, #10b981 0%, #065f46 100%) !important; color: #fff !important; }
-.status-rain { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important; color: #fff !important; }
-
-/* Custom utility for hierarchy — definições movidas para o bloco de tema acima */
-
-/* Login Screen */
-#login-screen {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: var(--bg-body);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-}
-
-.login-card {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    backdrop-filter: blur(20px);
-    border-radius: 2rem;
-    padding: 2.5rem;
-    width: 100%;
-    max-width: 400px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-}
-
-.user-btn {
-    width: 100%;
-    padding: 1rem 1.5rem;
-    border-radius: 1rem;
-    border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.04);
-    color: var(--text-main);
-    font-weight: 700;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    text-align: left;
-}
-
-.user-btn:hover {
-    background: rgba(99,102,241,0.15);
-    border-color: rgba(99,102,241,0.4);
-    transform: translateY(-2px);
-}
-
-.user-btn .user-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-
-/* Role badge na nav */
-#role-badge {
-    font-size: 0.6rem;
-    font-weight: 800;
-    padding: 2px 8px;
-    border-radius: 999px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-}
-    
-/* ── Espaçamentos fluidos nas views ── */
-@media (max-width: 640px) {
-    .space-y-8 > * + * { margin-top: 1.5rem !important; }
-    .space-y-12 > * + * { margin-top: 2rem !important; }
-    .glass-card { padding: clamp(0.75rem, 3vw, 1.5rem) !important; }
-    .glass-card:hover { transform: none; }
-}
-
-/* ── Cards de quadras na view Admin/Público — mínimo legível ── */
-@media (max-width: 480px) {
-    .responsive-grid { grid-template-columns: 1fr !important; }
-}
-
-/* ── Ajuste do container para não ter overflow horizontal ── */
-.container {
-    width: 100%;
-    max-width: 1280px;
-    margin-left: auto;
-    margin-right: auto;
-    overflow-x: hidden;
-}
-
-/* ── Touch targets mínimos de 44px em mobile ── */
-@media (max-width: 767px) {
-    button, [role="button"] {
-        min-height: 36px;
-    }
-    .btn-touch, .nav-icon-btn {
-        min-height: 44px;
-        min-width: 44px;
-    }
-}
-
-/* ── Tabela de settings: scroll horizontal em mobile ── */
-@media (max-width: 640px) {
-    .settings-tab-btn {
-        font-size: 0.5rem !important;
-        padding: 0.4rem 0.3rem !important;
-        gap: 0.25rem !important;
-    }
-    .settings-tab-btn span.tab-label { display: none !important; }
-}
-
-/* ── Lesson schedule row: compacto ── */
-@media (max-width: 400px) {
-    .lesson-schedule-row {
-        grid-template-columns: 1fr !important;
-        gap: 0.35rem !important;
-    }
-}
-
-/* ── Sidebar de sócios — mobile ── */
-#members-sidebar-panel {
-    /* Scroll interno da lista de sócios */
-    -webkit-overflow-scrolling: touch;
-}
-#members-list-container {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    flex: 1 1 0;
-    min-height: 0;
-}
-@media (max-width: 599px) {
-    /* Sidebar ocupa tela inteira em celular */
-    #members-sidebar-panel {
-        max-width: 100vw !important;
-        width: 100vw !important;
-    }
-}
-
-/* ── Garantir scroll nas views em mobile ── */
-@media (max-width: 767px) {
-    html, body {
-        overflow-x: hidden;
-        /* NÃO bloquear overflow-y — deixar rolar */
-    }
-    .view {
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    /* Modais com scroll interno */
-    .modal-theme-fix {
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch;
-        max-height: 92dvh !important;
-    }
-}
-
-</style>
-</head>
-<body class="min-h-screen">
-    <canvas id="tennis-canvas"></canvas>
-    <div id="glass-overlay"></div>
-    <div class="mesh-bg"></div>
-    <div id="toast-container"></div>
-
-    <!-- LOGIN SCREEN -->
-    <div id="login-screen">
-        <div class="login-card space-y-6">
-            <!-- Logo -->
-            <div class="flex flex-col items-center gap-3 mb-2">
-                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                    <i class="fas fa-table-tennis-paddle-ball text-2xl text-white"></i>
-                </div>
-                <div class="text-center">
-                    <h1 class="text-2xl font-bold text-white">Reserva<span class="text-indigo-400">Quadras</span></h1>
-                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">Selecione seu perfil de acesso</p>
-                </div>
-            </div>
-
-            <!-- PIN input (hidden, shown after user selection) -->
-            <div id="pin-area" class="hidden space-y-4">
-                <div class="text-center">
-                    <p id="pin-label" class="text-sm font-bold text-gray-300 mb-3">Digite a senha</p>
-                    <input type="password" id="pin-input" maxlength="20" placeholder="••••••"
-                        class="w-full input-glass p-4 rounded-xl font-bold text-center text-lg tracking-widest"
-                        onkeydown="if(event.key==='Enter') confirmPin()">
-                    <p id="pin-error" class="text-red-400 text-xs font-bold mt-2 hidden">Senha incorreta. Tente novamente.</p>
-                </div>
-                <button onclick="confirmPin()" class="w-full btn-primary py-3 rounded-xl font-bold text-xs uppercase tracking-widest">
-                    <i class="fas fa-unlock mr-2"></i>Entrar
-                </button>
-                <button onclick="backToUsers()" class="w-full py-2 text-gray-500 text-xs font-bold uppercase tracking-widest hover:text-gray-300 transition-colors">
-                    ← Voltar
-                </button>
-            </div>
-
-            <!-- User selection -->
-            <div id="user-list" class="space-y-3">
-                <button class="user-btn" onclick="selectUser('publico')">
-                    <div class="user-icon bg-emerald-500/20 text-emerald-400"><i class="fas fa-users"></i></div>
-                    <div>
-                        <div class="text-white">Público</div>
-                        <div class="text-[10px] text-gray-500 font-normal normal-case tracking-normal mt-0.5">Status das quadras em tempo real</div>
-                    </div>
-                </button>
-                <button class="user-btn" onclick="selectUser('diretora')">
-                    <div class="user-icon bg-purple-500/20 text-purple-400"><i class="fas fa-chart-pie"></i></div>
-                    <div>
-                        <div class="text-white">Diretora</div>
-                        <div class="text-[10px] text-gray-500 font-normal normal-case tracking-normal mt-0.5">Dashboard e análise do clube</div>
-                    </div>
-                </button>
-                <button class="user-btn" onclick="selectUser('esportes')">
-                    <div class="user-icon bg-indigo-500/20 text-indigo-400"><i class="fas fa-shield-halved"></i></div>
-                    <div>
-                        <div class="text-white">Esportes</div>
-                        <div class="text-[10px] text-gray-500 font-normal normal-case tracking-normal mt-0.5">Acesso completo ao sistema</div>
-                    </div>
-                </button>
-            </div>
-        </div>
-        <p class="text-[10px] text-gray-600 mt-6 font-medium">ReservaQuadras Pro · Management System</p>
-    </div>
-
-    <!-- Navigation -->
-    <nav class="sticky top-0 z-[100] backdrop-blur-md bg-[var(--nav-bg)] border-b border-white/5 px-3 md:px-6 py-2.5 md:py-3.5">
-        <div class="container mx-auto flex justify-between items-center gap-2">
-
-            <!-- Brand -->
-            <div class="flex items-center gap-2 group cursor-pointer flex-shrink-0" onclick="switchView('home')">
-                <div class="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-500 shadow-lg shadow-indigo-500/20 flex-shrink-0">
-                    <i class="fas fa-table-tennis-paddle-ball text-sm text-white"></i>
-                </div>
-                <div class="nav-brand-text">
-                    <h1 id="brand-name" class="text-sm font-bold tracking-tight text-white leading-none">Reserva<span class="text-indigo-400">Quadras</span></h1>
-                    <p class="text-[7px] font-bold text-gray-500 uppercase tracking-widest leading-none mt-0.5">Pro</p>
-                </div>
-            </div>
-
-            <!-- Nav Links — visíveis em telas médias+ -->
-            <div class="nav-links-center" id="nav-links-center">
-                <button onclick="switchView('home')" id="nav-home" class="nav-link nav-diretora nav-esportes">INÍCIO</button>
-                <button onclick="switchView('public')" id="nav-public" class="nav-link nav-publico nav-esportes">PÚBLICO</button>
-                <button onclick="switchView('admin')" id="nav-admin" class="nav-link nav-esportes">ADMIN</button>
-                <button onclick="switchView('settings')" id="nav-settings" class="nav-link nav-esportes">AJUSTES</button>
-            </div>
-
-            <!-- Actions — sempre visíveis -->
-            <div class="flex items-center gap-1.5 flex-shrink-0 desktop-actions-right">
-                <!-- Theme toggle -->
-                <button onclick="toggleTheme()" class="nav-icon-btn" title="Alternar Tema">
-                    <i id="theme-icon" class="fas fa-moon text-indigo-400 text-xs"></i>
-                </button>
-
-                <!-- Role badge -->
-                <div id="role-badge" class="nav-role-badge">
-                    <i id="role-icon" class="text-xs"></i>
-                    <span id="role-label" class="text-[9px] font-bold uppercase tracking-widest nav-role-label"></span>
-                </div>
-
-                <!-- Logout -->
-                <button onclick="logout()" title="Trocar usuário" class="nav-icon-btn nav-logout-btn">
-                    <i class="fas fa-right-from-bracket text-gray-400 text-xs transition-colors"></i>
-                </button>
-
-                <!-- Online indicator -->
-                <span class="nav-online-dot">
-                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block"></span>
-                    <span class="nav-online-label text-[7px] font-bold text-emerald-400">ONLINE</span>
-                </span>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Mobile Bottom Navigation Bar -->
-    <nav id="mobile-bottom-nav">
-        <button class="bottom-nav-btn active" id="bnav-home" onclick="switchView('home'); updateBottomNav('home');" data-views="nav-diretora nav-esportes">
-            <i class="fas fa-house"></i>
-            <span>Início</span>
-        </button>
-        <button class="bottom-nav-btn" id="bnav-public" onclick="switchView('public'); updateBottomNav('public');" data-views="nav-publico nav-esportes">
-            <i class="fas fa-signal"></i>
-            <span>Público</span>
-        </button>
-        <button class="bottom-nav-btn" id="bnav-admin" onclick="switchView('admin'); updateBottomNav('admin');" data-views="nav-esportes">
-            <i class="fas fa-table-tennis-paddle-ball"></i>
-            <span>Admin</span>
-        </button>
-        <button class="bottom-nav-btn" id="bnav-settings" onclick="switchView('settings'); updateBottomNav('settings');" data-views="nav-esportes">
-            <i class="fas fa-sliders"></i>
-            <span>Ajustes</span>
-        </button>
-    </nav>
-
-    <main class="container mx-auto" style="padding: clamp(0.75rem, 3vw, 3rem);">
-        <!-- Home View -->
-        <div id="home-view" class="view space-y-8 md:space-y-12 py-6 md:py-10">
-            <div class="space-y-8">
-                    <div class="flex justify-between items-center">
-                        <div class="inline-flex items-center gap-3 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
-                            <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-ping"></span>
-                            <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Dashboard Real-time</span>
-                        </div>
-                        <button onclick="exportDashboardData()" class="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all flex items-center gap-2 btn-hover-effect">
-                            <i class="fas fa-file-export"></i> Exportar
-                        </button>
-                    </div>
-                    
-                    <h2 class="text-responsive-h1 font-bold leading-tight tracking-tight text-white">
-                        Visão Geral do <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Seu Clube</span>
-                    </h2>
-                    
-                    <div class="responsive-grid">
-                        <div class="glass-card p-5 md:p-6 rounded-2xl">
-                            <p class="text-label mb-1">Quadras Ocupadas</p>
-                            <p id="stat-occupied" class="stat-value">0</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl">
-                            <p class="text-label mb-1">Na Espera</p>
-                            <p id="stat-wait" class="stat-value text-indigo-400">0</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl">
-                            <p class="text-label mb-1">Jogos Hoje</p>
-                            <p id="stat-total" class="stat-value text-emerald-400">0</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl">
-                            <p class="text-label mb-1">Desistências</p>
-                            <p id="stat-withdrawals" class="stat-value text-red-400">0</p>
-                        </div>
-                    </div>
-                    
-                    <div class="responsive-grid">
-                        <div class="glass-card p-5 md:p-6 rounded-2xl border border-emerald-500/20 hover:border-emerald-500/50">
-                            <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Aulas Hoje</p>
-                            <p id="stat-lessons-today" class="text-2xl font-bold text-emerald-400">0</p>
-                            <p class="text-[10px] text-gray-500 mt-1 font-medium" id="stat-lessons-min">-- min</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl border border-indigo-500/20 hover:border-indigo-500/50">
-                            <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Bate-bola</p>
-                            <p id="stat-batebola-today" class="text-2xl font-bold text-indigo-400">0</p>
-                            <p class="text-[10px] text-gray-500 mt-1 font-medium" id="stat-batebola-min">-- min</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl border border-purple-500/20 hover:border-purple-500/50">
-                            <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Simples/Dupla</p>
-                            <p id="stat-games-today" class="text-2xl font-bold text-purple-400">0</p>
-                            <p class="text-[10px] text-gray-500 mt-1 font-medium" id="stat-games-min">-- min</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl border border-amber-500/20 hover:border-amber-500/50">
-                            <p class="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1">Ranking</p>
-                            <p id="stat-ranking-today" class="text-2xl font-bold text-amber-400">0</p>
-                            <p class="text-[10px] text-gray-500 mt-1 font-medium" id="stat-ranking-min">-- min</p>
-                        </div>
-                    </div>
-                    
-                    <div class="responsive-grid">
-                        <div class="glass-card p-5 md:p-6 rounded-2xl">
-                            <p class="text-label mb-1">Média Jogo</p>
-                            <p id="stat-avg" class="text-2xl font-bold text-purple-400">--</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl">
-                            <p class="text-label mb-1">Espera Média</p>
-                            <p id="stat-avg-wait" class="text-2xl font-bold text-indigo-300">--</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl">
-                            <p class="text-label mb-1">Sócio do Dia</p>
-                            <p id="stat-top-player" class="text-base font-bold text-white truncate">--</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl">
-                            <p class="text-label mb-1">Total Hoje (min)</p>
-                            <p id="stat-total-min" class="text-2xl font-bold text-cyan-400">--</p>
-                        </div>
-                    </div>
-
-                    <!-- KPIs G.3: Período, Quadra Ociosa, Pico de Espera -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="glass-card p-6 rounded-2xl space-y-4">
-                            <p class="text-label text-yellow-400">Média por Período</p>
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-xs font-medium"><span class="text-gray-400">☀️ Manhã</span><span id="stat-avg-morning" class="font-bold text-yellow-400">--</span></div>
-                                <div class="flex justify-between text-xs font-medium"><span class="text-gray-400">🌤️ Tarde</span><span id="stat-avg-afternoon" class="font-bold text-orange-400">--</span></div>
-                                <div class="flex justify-between text-xs font-medium"><span class="text-gray-400">🌙 Noite</span><span id="stat-avg-evening" class="font-bold text-purple-400">--</span></div>
-                            </div>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-label text-red-400">Quadra Mais Ociosa</p>
-                            <p id="stat-laziest-court" class="text-lg font-bold text-white truncate">--</p>
-                            <p id="stat-laziest-court-min" class="text-[10px] text-gray-500 mt-1 font-medium">-- min</p>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-label text-rose-400">Pico de Espera</p>
-                            <p id="stat-peak-wait" class="text-2xl font-bold text-rose-400">--</p>
-                            <p id="stat-peak-wait-name" class="text-[10px] text-gray-500 mt-1 truncate font-medium">--</p>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-6 md:p-10 rounded-[2rem] space-y-10">
-                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                            <div>
-                                <h3 class="text-responsive-h2 font-bold text-white flex items-center gap-3">
-                                    <i class="fas fa-chart-line text-indigo-400"></i>
-                                    Análise de Ocupação
-                                </h3>
-                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Últimos 28 dias de atividade</p>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <button onclick="exportOccupancyComplete()" class="px-3 py-2 bg-gradient-to-r from-emerald-500/10 to-indigo-500/10 border border-white/10 rounded-xl text-white font-bold text-[10px] uppercase tracking-widest hover:border-white/30 transition-all flex items-center gap-2 btn-hover-effect">
-                                    <i class="fas fa-file-archive"></i> Tudo
-                                </button>
-                                <button onclick="exportOccupancySummary()" class="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2 btn-hover-effect">
-                                    <i class="fas fa-download"></i> Resumo
-                                </button>
-                                <button onclick="exportOccupancyByCourt()" class="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2 btn-hover-effect">
-                                    <i class="fas fa-download"></i> Por Quadra
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4" id="occupancy-kpis">
-                            <div class="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <p class="text-label text-emerald-400 mb-1">Aulas</p>
-                                <p id="occ-lessons-kpi" class="text-xl font-bold text-emerald-400">--%</p>
-                            </div>
-                            <div class="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <p class="text-label mb-1">Taxa Média</p>
-                                <p id="occ-avg-rate" class="text-xl font-bold text-white">--%</p>
-                            </div>
-                            <div class="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <p class="text-label text-yellow-400 mb-1">Manhã</p>
-                                <p id="occ-morning-rate" class="text-xl font-bold text-yellow-400">--%</p>
-                            </div>
-                            <div class="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <p class="text-label text-orange-400 mb-1">Tarde</p>
-                                <p id="occ-afternoon-rate" class="text-xl font-bold text-orange-400">--%</p>
-                            </div>
-                            <div class="bg-white/5 p-4 rounded-xl border border-white/5">
-                                <p class="text-label text-purple-400 mb-1">Noite</p>
-                                <p id="occ-evening-rate" class="text-xl font-bold text-purple-400">--%</p>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="bg-white/5 p-6 rounded-2xl border border-white/5">
-                                <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-3">Aulas</p>
-                                <div class="space-y-2">
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-400 text-sm">Total de Horas</span>
-                                        <span id="occ-lessons-hours" class="font-bold text-white">--</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-400 text-sm">Taxa de Ocupação</span>
-                                        <span id="occ-lessons-rate" class="font-bold text-emerald-400">--%</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="bg-white/5 p-6 rounded-2xl border border-white/5">
-                                <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3">Outras Atividades</p>
-                                <div class="space-y-2">
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-400 text-sm">Total de Horas</span>
-                                        <span id="occ-other-hours" class="font-bold text-white">--</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-400 text-sm">Taxa de Ocupação</span>
-                                        <span id="occ-other-rate" class="font-bold text-indigo-400">--%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-4">
-                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Quadra Mais Utilizada</p>
-                                <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <span id="stat-top-court" class="font-bold text-white">--</span>
-                                    <span id="stat-top-court-count" class="text-xs font-black text-indigo-400">0 jogos</span>
-                                </div>
-                            </div>
-                            <div class="space-y-4">
-                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Horário de Pico</p>
-                                <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <span id="stat-peak-hour" class="font-bold text-white">--</span>
-                                    <span id="stat-peak-count" class="text-xs font-black text-purple-400">0 entradas</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-4">
-                            <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Ocupação de Aulas por Quadra</p>
-                            <div id="lessons-occupancy-by-court" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <!-- Injected by JS -->
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="space-y-4">
-                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Ocupação por Quadra</p>
-                                <div id="occupancy-by-court" class="space-y-3">
-                                    <!-- Injected by JS -->
-                                </div>
-                            </div>
-                            <div class="space-y-4">
-                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Ocupação por Tipo de Atividade</p>
-                                <div id="occupancy-by-activity" class="space-y-3">
-                                    <!-- Injected by JS -->
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-4">
-                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Distribuição por Atividade</p>
-                            <div id="stat-activity-distribution" class="flex h-4 rounded-full overflow-hidden bg-white/5 border border-white/10">
-                                <!-- Injected by JS -->
-                            </div>
-                            <div id="stat-activity-legend" class="flex flex-wrap gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                <!-- Injected by JS -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="glass-card p-8 rounded-[2.5rem] space-y-6">
-                        <div class="flex items-center gap-3 mb-4">
-                            <i class="fas fa-info-circle text-indigo-400 text-xl"></i>
-                            <h3 class="text-xl font-black text-white">Legenda e Explicações</h3>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-4">
-                                <h4 class="font-bold text-white text-sm">📊 Indicadores de Hoje</h4>
-                                <div class="space-y-3 text-xs text-gray-300">
-                                    <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="font-bold text-white mb-1">Quadras Ocupadas</p>
-                                        <p>Número de quadras atualmente com atividade em andamento</p>
-                                    </div>
-                                    <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="font-bold text-white mb-1">Na Espera</p>
-                                        <p>Número de grupos na fila aguardando uma quadra</p>
-                                    </div>
-                                    <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="font-bold text-white mb-1">Jogos Hoje</p>
-                                        <p>Total de atividades concluídas no dia atual</p>
-                                    </div>
-                                    <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="font-bold text-white mb-1">Aulas / Bate-bola / etc</p>
-                                        <p>Contagem de atividades por tipo + minutos totais jogados no dia</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="space-y-4">
-                                <h4 class="font-bold text-white text-sm">📈 Análise de Ocupação (30 dias)</h4>
-                                <div class="space-y-3 text-xs text-gray-300">
-                                    <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="font-bold text-white mb-1">Taxa Média de Ocupação</p>
-                                        <p>(Tempo total ocupado / Tempo total disponível) × 100. Considera apenas os períodos: Manhã (06:30-12:30), Tarde (12:31-18:30) e Noite (18:31-22:00)</p>
-                                    </div>
-                                    <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="font-bold text-white mb-1">Aulas por Quadra</p>
-                                        <p>Mostra especificamente o quanto cada quadra está sendo utilizada para aulas nos períodos da manhã, tarde e noite.</p>
-                                    </div>
-                                    <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="font-bold text-white mb-1">Aulas vs Outras Atividades</p>
-                                        <p>Atividades que contêm "Aula" no nome são automaticamente classificadas como aulas. O restante (Bate-bola, Simples, Dupla, Ranking) são "Outras Atividades"</p>
-                                    </div>
-                                    <div class="bg-white/5 p-3 rounded-xl">
-                                        <p class="font-bold text-white mb-1">Cores das Barras de Ocupação</p>
-                                        <p class="flex items-center gap-2 mb-1">
-                                            <span class="w-4 h-4 bg-emerald-500 rounded"></span> Verde: &lt;25%
-                                        </p>
-                                        <p class="flex items-center gap-2 mb-1">
-                                            <span class="w-4 h-4 bg-yellow-500 rounded"></span> Amarelo: 25-50%
-                                        </p>
-                                        <p class="flex items-center gap-2 mb-1">
-                                            <span class="w-4 h-4 bg-orange-500 rounded"></span> Laranja: 50-75%
-                                        </p>
-                                        <p class="flex items-center gap-2">
-                                            <span class="w-4 h-4 bg-red-500 rounded"></span> Vermelho: &gt;75%
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ======== ANÁLISE DO CLUBE (movida da aba Público) ======== -->
-                <div id="pub-panel-analytics" class="space-y-8 mt-4">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                                <i class="fas fa-chart-bar text-indigo-400"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-responsive-h2 font-bold tracking-tight text-white">Análise do <span class="text-indigo-400">Clube</span></h3>
-                                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5" id="pub-analytics-subtitle">Dados: Últimos 28 dias — transparência para os sócios</p>
-                            </div>
-                        </div>
-
-                        <!-- Seletor de Período -->
-                        <div class="flex bg-white/5 p-1 rounded-xl border border-white/10 self-start md:self-center">
-                            <button onclick="changeAnalyticsPeriod('day')" id="btn-period-day" class="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">Hoje</button>
-                            <button onclick="changeAnalyticsPeriod('week')" id="btn-period-week" class="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">Semana</button>
-                            <button onclick="changeAnalyticsPeriod('rolling')" id="btn-period-rolling" class="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-indigo-600 text-white shadow-lg transition-all">28d</button>
-                        </div>
-                    </div>
-
-                    <div class="responsive-grid" id="pub-analytics-kpis">
-                        <div class="glass-card p-5 md:p-6 rounded-2xl text-center">
-                            <p class="text-label mb-1" id="pub-label-total">Jogos no Mês</p>
-                            <p id="pub-stat-total-month" class="stat-value text-indigo-400">--</p>
-                            <p class="text-[10px] text-gray-500 mt-1 font-medium">atividades registradas</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl text-center">
-                            <p class="text-label mb-1" id="pub-label-hours">Horas de Jogo</p>
-                            <p id="pub-stat-hours-month" class="stat-value text-emerald-400">--</p>
-                            <p class="text-[10px] text-gray-500 mt-1 font-medium">horas totais utilizadas</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl text-center">
-                            <p class="text-label mb-1">Taxa de Ocupação</p>
-                            <p id="pub-stat-occ-rate" class="stat-value text-purple-400">--%</p>
-                            <p class="text-[10px] text-gray-500 mt-1 font-medium">média geral das quadras</p>
-                        </div>
-                        <div class="glass-card p-5 md:p-6 rounded-2xl text-center">
-                            <p class="text-label mb-1" id="pub-label-busiest">Dia Mais Movido</p>
-                            <p id="pub-stat-busiest-day" class="stat-value text-amber-400" style="font-size:1.3rem">--</p>
-                            <p class="text-[10px] text-gray-500 mt-1 font-medium" id="pub-stat-busiest-day-count">-- atividades</p>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6">
-                        <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center"><i class="fas fa-table-tennis-paddle-ball text-indigo-400"></i></div>
-                            <div><h3 class="text-lg font-bold text-white">Ocupação por Quadra</h3><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5" id="pub-court-occ-label">Últimos 30 dias</p></div>
-                        </div>
-                        <div id="pub-court-occ" class="space-y-5"></div>
-                        <div class="flex flex-wrap gap-4 pt-2 border-t border-white/5">
-                            <div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Baixa (&lt;25%)</div>
-                            <div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> Moderada (25-50%)</div>
-                            <div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase"><span class="w-3 h-3 rounded-full bg-orange-500"></span> Alta (50-75%)</div>
-                            <div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase"><span class="w-3 h-3 rounded-full bg-red-500"></span> Muito Alta (&gt;75%)</div>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6">
-                        <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center"><i class="fas fa-clock text-amber-400"></i></div>
-                            <div><h3 class="text-lg font-bold text-white">Movimentação por Período</h3><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Quando o clube está mais ativo</p></div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="pub-period-bars"></div>
-                        <p class="text-[10px] text-gray-500 font-medium border-t border-white/5 pt-4">💡 Use esta informação para planejar melhor o horário da sua visita ao clube.</p>
-                    </div>
-
-                    <div class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6">
-                        <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center"><i class="fas fa-chart-pie text-purple-400"></i></div>
-                            <div><h3 class="text-lg font-bold text-white">Mix de Atividades</h3><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Como as quadras estão sendo usadas</p></div>
-                        </div>
-                        <div id="pub-activity-bar" class="flex h-5 rounded-full overflow-hidden bg-white/5 border border-white/10"></div>
-                        <div id="pub-activity-breakdown" class="space-y-3"></div>
-                    </div>
-
-                    <div class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6">
-                        <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center"><i class="fas fa-calendar-week text-emerald-400"></i></div>
-                            <div><h3 class="text-lg font-bold text-white">Atividade por Dia da Semana</h3><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Qual dia tem mais jogos</p></div>
-                        </div>
-                        <div id="pub-weekday-chart" class="flex items-end gap-2 h-32"></div>
-                        <p id="pub-weekday-tip" class="text-[11px] text-indigo-300 font-medium border-t border-white/5 pt-4"></p>
-                    </div>
-
-                    <div class="p-5 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex gap-4">
-                        <i class="fas fa-circle-info text-indigo-400 mt-1 shrink-0"></i>
-                        <p class="text-[11px] text-gray-400 leading-relaxed font-medium">Estes dados são calculados automaticamente com base nas atividades registradas pelo clube nas últimas 4 semanas. As taxas de ocupação consideram os períodos de funcionamento: Manhã (06:30-12:30), Tarde (12:31-18:30) e Noite (18:31-22:00).</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Admin View -->
-        <div id="admin-view" class="view hidden space-y-8 md:space-y-12">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-                <div>
-                    <h2 class="text-responsive-h1 font-bold tracking-tight">Gerenciamento <span class="text-indigo-400">Mestre</span></h2>
-                    <p class="text-gray-500 font-medium mt-2">Controle de ocupação, aulas e bloqueios técnicos.</p>
-                </div>
-                <div class="flex flex-wrap gap-2 w-full lg:w-auto">
-                    <button onclick="openBookingModal('queue')" class="btn-primary px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg flex-1 md:flex-none btn-hover-effect">
-                        Fila
-                    </button>
-                    <button onclick="openBookingModal('court')" class="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex-1 md:flex-none btn-hover-effect">
-                        Inscrição
-                    </button>
-                    <button onclick="openMemberModal()" class="px-6 py-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all flex-1 md:flex-none btn-hover-effect">Sócios</button>
-                    <button onclick="openUndoModal()" class="px-6 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-[10px] uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex-1 md:flex-none flex items-center justify-center gap-2 btn-hover-effect"><i class="fas fa-rotate-left"></i> Reverter</button>
-                    <button onclick="clearAllData()" class="px-6 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex-1 md:flex-none btn-hover-effect">Limpar</button>
-                </div>
-            </div>
-
-            <div class="responsive-grid" id="admin-grid">
-                <!-- Skeleton Loading -->
-                <div class="glass-card p-6 rounded-2xl space-y-4">
-                    <div class="h-6 w-3/4 skeleton"></div>
-                    <div class="h-20 w-full skeleton"></div>
-                    <div class="h-10 w-full skeleton"></div>
-                </div>
-                <div class="glass-card p-6 rounded-2xl space-y-4">
-                    <div class="h-6 w-3/4 skeleton"></div>
-                    <div class="h-20 w-full skeleton"></div>
-                    <div class="h-10 w-full skeleton"></div>
-                </div>
-                <div class="glass-card p-6 rounded-2xl space-y-4">
-                    <div class="h-6 w-3/4 skeleton"></div>
-                    <div class="h-20 w-full skeleton"></div>
-                    <div class="h-10 w-full skeleton"></div>
-                </div>
-            </div>
-
-            <!-- Fila de Espera Admin -->
-            <div class="glass-card p-6 md:p-10 rounded-[2rem] space-y-8">
-                <div class="flex justify-between items-center border-b border-white/5 pb-6">
-                    <h3 class="text-xl font-bold text-white">Fila de Espera</h3>
-                    <div class="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-400 text-[10px] font-bold uppercase tracking-widest">
-                        Arraste para Gerenciar
-                    </div>
-                </div>
-                <div id="admin-waitlist" class="responsive-grid min-h-[120px] p-4 bg-black/10 rounded-2xl border border-dashed border-white/10 backdrop-blur-[2px]">
-                    <!-- Injected by JS -->
-                </div>
-            </div>
-
-            <!-- Banco de Dados JSON (Re-adicionado) -->
-            <div class="glass-card p-10 rounded-[3rem] space-y-8">
-                <h3 class="text-xl font-black border-b border-white/5 pb-4 flex justify-between items-center">
-                    Banco de Dados de Sócios (JSON)
-                    <button onclick="document.getElementById('db-json-container').classList.toggle('hidden')" class="text-xs text-indigo-400 font-bold uppercase tracking-widest">Ver/Ocultar</button>
-                </h3>
-                <div id="db-json-container" class="hidden space-y-6">
-                    <div class="space-y-2">
-                        <textarea id="set-members-admin" oninput="syncMembersFromAdmin()" class="w-full input-glass p-6 rounded-2xl font-mono text-xs h-64 custom-scrollbar" placeholder='{"1001": ["João", "Maria"]}'></textarea>
-                    </div>
-                    <div class="flex gap-4">
-                        <button onclick="updateSettings()" class="btn-primary px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg">Atualizar Base</button>
-                        <button onclick="exportMembers()" class="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 font-black text-xs uppercase tracking-widest hover:bg-white/10">Exportar Base</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Public View -->
-        <div id="public-view" class="view hidden space-y-8 md:space-y-12">
-
-            <!-- Sub-tabs: Status | Análise -->
-            <div class="flex flex-col items-center text-center space-y-4 pt-4 md:pt-10">
-                <div class="relative inline-block">
-                    <div id="public-clock" class="text-responsive-h1 font-bold text-indigo-400">00:00:00</div>
-                    <span id="clock-sync-indicator" title="Sincronizando horário..." class="absolute -top-1 -right-5 text-gray-500 text-[10px]" style="font-size:10px">
-                        <i class="fas fa-wifi"></i>
-                    </span>
-                </div>
-                <div class="flex items-center gap-4 text-gray-500 font-bold uppercase tracking-widest text-xs md:text-sm">
-                    <span id="public-date">--/--/----</span>
-                    <span class="w-1.5 h-1.5 bg-white/10 rounded-full"></span>
-                    <span id="public-weekday">----------</span>
-                </div>
-
-                <!-- Tab Switcher — só Status ao vivo -->
-                <div class="flex gap-2 mt-4 p-1 bg-white/5 border border-white/10 rounded-2xl">
-                    <button id="pub-tab-status" onclick="switchPublicTab('status')"
-                        class="px-6 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all bg-indigo-600 text-white shadow-lg">
-                        <i class="fas fa-signal mr-2"></i>Status ao Vivo
-                    </button>
-                </div>
-            </div>
-
-            <!-- ======== TAB: STATUS AO VIVO ======== -->
-            <div id="pub-panel-status">
-                <h2 class="text-responsive-h2 font-bold tracking-tight text-white leading-tight text-center mb-2">Status das <span class="text-indigo-400">Quadras</span></h2>
-                <p class="text-gray-400 text-base font-medium text-center mb-8">Disponibilidade em tempo real para os sócios.</p>
-
-                <div id="public-grid" class="responsive-grid">
-                    <!-- Skeleton Loading -->
-                    <div class="glass-card p-8 rounded-2xl space-y-4">
-                        <div class="h-8 w-1/2 skeleton mx-auto"></div>
-                        <div class="h-32 w-full skeleton"></div>
-                    </div>
-                    <div class="glass-card p-8 rounded-2xl space-y-4">
-                        <div class="h-8 w-1/2 skeleton mx-auto"></div>
-                        <div class="h-32 w-full skeleton"></div>
-                    </div>
-                    <div class="glass-card p-8 rounded-2xl space-y-4">
-                        <div class="h-8 w-1/2 skeleton mx-auto"></div>
-                        <div class="h-32 w-full skeleton"></div>
-                    </div>
-                    <div class="glass-card p-8 rounded-2xl space-y-4">
-                        <div class="h-8 w-1/2 skeleton mx-auto"></div>
-                        <div class="h-32 w-full skeleton"></div>
-                    </div>
-                </div>
-
-                <div class="glass-card p-6 md:p-10 rounded-[2rem] max-w-full mx-auto mt-8">
-                    <div class="flex justify-between items-center mb-10 border-b border-white/5 pb-6">
-                        <h3 class="text-responsive-h2 font-bold tracking-tight text-white">Fila de Espera</h3>
-                        <div class="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-300 text-[10px] font-bold tracking-widest uppercase">
-                            Próximos Chamados
-                        </div>
-                    </div>
-                    <div id="public-waitlist" class="space-y-4">
-                        <!-- Injected by JS -->
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Settings View -->
-        <!-- Settings View -->
-        <div id="settings-view" class="view hidden space-y-6 md:space-y-8 py-4 md:py-8">
-            <div>
-                <h2 class="text-responsive-h1 font-bold tracking-tight text-white">Ajustes do <span class="text-indigo-400">Sistema</span></h2>
-                <p class="text-gray-500 font-medium mt-1 text-sm">Personalize a experiência e gerencie seus dados mestre.</p>
-            </div>
-
-            <!-- Settings Sub-tabs -->
-            <div class="flex gap-1.5 flex-wrap p-1.5 bg-white/5 border border-white/10 rounded-2xl w-full">
-                <button class="settings-tab-btn active flex-1 min-w-[80px] justify-center" data-tab="geral" onclick="switchSettingsTab('geral')">
-                    <i class="fas fa-sliders"></i><span class="hidden xs:inline">Geral</span>
-                </button>
-                <button class="settings-tab-btn flex-1 min-w-[80px] justify-center" data-tab="horarios" onclick="switchSettingsTab('horarios')">
-                    <i class="fas fa-clock"></i><span class="hidden xs:inline">Horários</span>
-                </button>
-                <button class="settings-tab-btn flex-1 min-w-[80px] justify-center" data-tab="socios" onclick="switchSettingsTab('socios')">
-                    <i class="fas fa-users"></i><span class="hidden xs:inline">Sócios</span>
-                </button>
-                <button class="settings-tab-btn flex-1 min-w-[80px] justify-center" data-tab="seguranca" onclick="switchSettingsTab('seguranca')">
-                    <i class="fas fa-shield-halved"></i><span class="hidden xs:inline">Segurança</span>
-                </button>
-            </div>
-
-            <!-- TAB: GERAL -->
-            <div id="settings-panel-geral" class="settings-panel active space-y-6">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    <!-- Geral Section -->
-                    <div class="glass-card p-5 md:p-7 rounded-[1.5rem] space-y-5">
-                        <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                            <div class="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-sliders text-indigo-400 text-sm"></i>
-                            </div>
-                            <h3 class="text-base md:text-xl font-bold text-white">Configurações Gerais</h3>
-                        </div>
-                        <div class="space-y-4">
-                            <div class="space-y-2">
-                                <label class="text-label">Nome do Clube</label>
-                                <input type="text" id="set-club-name" onchange="updateSettings()" placeholder="Ex: Meu Clube de Tênis" class="w-full input-glass p-3 md:p-4 rounded-xl font-bold text-sm">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-label">Nomes das Quadras (Separados por vírgula)</label>
-                                <input type="text" id="set-courts" onchange="updateSettings()" placeholder="Quadra 1, Quadra 2..." class="w-full input-glass p-3 md:p-4 rounded-xl font-bold text-sm">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-label">Cor de Identidade</label>
-                                <div class="flex gap-3 items-center">
-                                    <input type="color" id="set-color" onchange="updateSettings()" class="w-14 h-11 rounded-xl bg-white/5 border border-white/10 p-1 cursor-pointer">
-                                    <span class="text-[10px] font-bold text-gray-500 uppercase">A cor principal do sistema</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Performance & Visual Section -->
-                    <div class="glass-card p-5 md:p-7 rounded-[1.5rem] space-y-5">
-                        <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                            <div class="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-bolt text-amber-400 text-sm"></i>
-                            </div>
-                            <h3 class="text-base md:text-xl font-bold text-white">Performance & Visual</h3>
-                        </div>
-                        <div class="space-y-5">
-                            <div class="p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl flex gap-3">
-                                <i class="fas fa-circle-info text-amber-400 mt-0.5 text-sm flex-shrink-0"></i>
-                                <p class="text-[10px] text-gray-400 leading-relaxed font-medium">O Modo Performance simplifica animações e desativa o fundo 3D para economizar recursos em dispositivos mais antigos.</p>
-                            </div>
-                            <div class="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
-                                <div>
-                                    <p class="text-sm font-bold text-white">Modo de Alta Performance</p>
-                                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">REDUZ CONSUMO DE GPU</p>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                                    <input type="checkbox" id="set-performance" onchange="togglePerformanceMode()" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                </label>
-                            </div>
-                            <div class="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex items-center justify-between gap-3">
-                                <div class="flex items-center gap-3 min-w-0">
-                                    <i class="fas fa-cloud-check text-emerald-400 flex-shrink-0"></i>
-                                    <div class="min-w-0">
-                                        <p class="text-xs font-bold text-white">Status da Nuvem</p>
-                                        <p id="cloud-status" class="text-[9px] text-gray-500 font-bold uppercase tracking-widest truncate">Sincronizado</p>
-                                    </div>
-                                </div>
-                                <button onclick="connectFirebase()" class="flex-shrink-0 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg font-bold text-[9px] uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all btn-hover-effect">Reconectar</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB: HORÁRIOS DAS AULAS -->
-            <div id="settings-panel-horarios" class="settings-panel space-y-5">
-                <!-- Sub-abas para Horários -->
-                <div class="flex gap-2 p-2 bg-white/5 border border-white/10 rounded-xl flex-wrap">
-                    <button class="lesson-tab-btn active px-4 py-2 rounded-lg text-sm font-bold transition-all" data-lesson-tab="editor" onclick="switchLessonTab('editor')">
-                        <i class="fas fa-edit mr-2"></i>Editor de Horários
-                    </button>
-                    <button class="lesson-tab-btn px-4 py-2 rounded-lg text-sm font-bold transition-all" data-lesson-tab="preview" onclick="switchLessonTab('preview')">
-                        <i class="fas fa-calendar mr-2"></i>Visualizar Semana
-                    </button>
-                </div>
-
-                <!-- SUBABA: EDITOR DE HORÁRIOS -->
-                <div id="lesson-tab-editor" class="lesson-tab-content active glass-card p-5 md:p-7 rounded-[1.5rem] space-y-5">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-clock text-emerald-400 text-sm"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-base md:text-xl font-bold text-white">Gerenciar Horários de Aulas</h3>
-                                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Configure bloqueios automáticos por quadra</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 flex-wrap">
-                            <button onclick="saveFixedSchedules()" class="px-4 py-2.5 bg-emerald-600 rounded-xl text-white font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-500 transition-all btn-hover-effect flex items-center gap-2">
-                                <i class="fas fa-check"></i> Salvar
-                            </button>
-                            <button onclick="resetFixedSchedules()" class="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all btn-hover-effect flex items-center gap-2">
-                                <i class="fas fa-rotate-left"></i> Resetar
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Info banner -->
-                    <div class="p-3.5 bg-indigo-500/5 border border-indigo-500/15 rounded-xl flex gap-3">
-                        <i class="fas fa-circle-info text-indigo-400 mt-0.5 flex-shrink-0 text-sm"></i>
-                        <p class="text-[10px] text-gray-400 leading-relaxed font-medium">Configure os períodos de aula para cada quadra. Durante esses horários, as quadras ficarão automaticamente bloqueadas como <strong class="text-amber-400">Aula</strong>.</p>
-                    </div>
-
-                    <!-- Lesson schedule editor per court -->
-                    <div id="lesson-schedule-editor" class="space-y-3">
-                        <!-- Injected by renderLessonScheduleEditor() -->
-                    </div>
-                </div>
-
-                <!-- SUBABA: VISUALIZAR SEMANA -->
-                <div id="lesson-tab-preview" class="lesson-tab-content hidden glass-card p-5 md:p-7 rounded-[1.5rem] space-y-5">
-                    <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                        <div class="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-calendar text-purple-400 text-sm"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-base md:text-xl font-bold text-white">Visualização Semanal</h3>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Veja todos os horários de aulas da semana</p>
-                        </div>
-                    </div>
-                    <div id="lesson-weekly-preview" class="responsive-grid">
-                        <!-- Injected by renderLessonWeeklyPreview() -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB: SÓCIOS -->
-            <div id="settings-panel-socios" class="settings-panel space-y-5">
-                <div class="glass-card p-5 md:p-7 rounded-[1.5rem] space-y-5">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-database text-purple-400 text-sm"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-base md:text-xl font-bold text-white">Base de Dados de Sócios</h3>
-                                <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Editor JSON Direto (Cuidado ao editar)</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="exportMembers()" class="flex-1 sm:flex-none px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2 btn-hover-effect">
-                                <i class="fas fa-download"></i> Exportar
-                            </button>
-                            <button onclick="updateSettings()" class="flex-1 sm:flex-none px-5 py-2.5 bg-indigo-600 rounded-xl text-white font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 btn-hover-effect">
-                                Salvar
-                            </button>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <textarea id="set-members" class="w-full h-56 md:h-72 input-glass p-4 md:p-6 rounded-2xl font-mono text-xs leading-relaxed custom-scrollbar" placeholder='{ "Título": ["Nome"] }'></textarea>
-                        <div class="p-4 bg-purple-500/5 border border-purple-500/10 rounded-xl flex gap-3">
-                            <i class="fas fa-lightbulb text-purple-400 mt-1 flex-shrink-0 text-sm"></i>
-                            <p class="text-[10px] text-gray-500 leading-relaxed font-medium">Formato JSON: a chave é o número do título e o valor é uma lista de dependentes. Ex: <code class="text-purple-300 bg-black/20 px-1 rounded">{"1001": ["João Silva", "Maria"]}</code></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB: SEGURANÇA -->
-            <div id="settings-panel-seguranca" class="settings-panel space-y-5">
-                <!-- Backup Section -->
-                <div class="glass-card p-5 md:p-7 rounded-[1.5rem] space-y-5">
-                    <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                        <div class="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-shield-halved text-emerald-400 text-sm"></i>
-                        </div>
-                        <h3 class="text-base md:text-xl font-bold text-white">Backup & Segurança</h3>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div class="space-y-4">
-                            <p class="text-xs text-gray-400 font-medium">Recomendamos fazer um backup total semanalmente para evitar perda de dados em caso de limpeza do navegador.</p>
-                            <div class="flex flex-col sm:flex-row gap-3">
-                                <button onclick="exportFullSystemData()" class="flex-1 px-4 py-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2 btn-hover-effect">
-                                    <i class="fas fa-file-export"></i> Criar Backup (.json)
-                                </button>
-                                <button onclick="document.getElementById('import-file').click()" class="flex-1 px-4 py-4 rounded-xl bg-white/5 border border-white/10 text-gray-300 font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2 btn-hover-effect">
-                                    <i class="fas fa-file-import"></i> Restaurar Dados
-                                </button>
-                                <input type="file" id="import-file" class="hidden" accept=".json" onchange="importFullSystemData(this)">
-                            </div>
-                        </div>
-                        <div class="p-5 bg-red-500/5 border border-red-500/10 rounded-2xl flex flex-col justify-between gap-4">
-                            <div>
-                                <h4 class="text-xs font-bold text-red-400 uppercase tracking-widest flex items-center gap-2">
-                                    <i class="fas fa-triangle-exclamation"></i> Zona de Perigo
-                                </h4>
-                                <p class="text-[10px] text-gray-500 mt-2 font-medium">Isso apagará todos os dados locais permanentemente (Reservas, Histórico, Sócios).</p>
-                            </div>
-                            <button onclick="clearAllData()" class="w-full py-3 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 font-bold text-[9px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all btn-hover-effect">
-                                Resetar Sistema Completo
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Senha Section -->
-                <div class="glass-card p-5 md:p-7 rounded-[1.5rem] space-y-5">
-                    <div class="flex items-center gap-3 border-b border-white/5 pb-4">
-                        <div class="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-key text-indigo-400 text-sm"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-base md:text-xl font-bold text-white">Gerenciar Senhas</h3>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Altere as senhas de acesso dos usuários</p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="p-5 bg-indigo-500/5 border border-indigo-500/15 rounded-2xl space-y-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-shield-halved text-indigo-400 text-sm"></i>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-white">Esportes</p>
-                                    <p class="text-[10px] text-gray-500 font-medium">Acesso completo ao sistema</p>
-                                </div>
-                            </div>
-                            <button onclick="openPasswordModal('esportes')"
-                                class="w-full py-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all btn-hover-effect flex items-center justify-center gap-2">
-                                <i class="fas fa-pen"></i> Alterar Senha
-                            </button>
-                        </div>
-                        <div class="p-5 bg-purple-500/5 border border-purple-500/15 rounded-2xl space-y-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-chart-pie text-purple-400 text-sm"></i>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-white">Diretora</p>
-                                    <p class="text-[10px] text-gray-500 font-medium">Acesso ao dashboard</p>
-                                </div>
-                            </div>
-                            <button onclick="openPasswordModal('diretora')"
-                                class="w-full py-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 font-bold text-[10px] uppercase tracking-widest hover:bg-purple-500 hover:text-white transition-all btn-hover-effect flex items-center justify-center gap-2">
-                                <i class="fas fa-pen"></i> Alterar Senha
-                            </button>
-                        </div>
-                    </div>
-                    <p class="text-[10px] text-gray-600 font-medium">As senhas são salvas localmente neste dispositivo. O usuário Público não possui senha.</p>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal Alterar Senha -->
-    <div id="password-modal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closePasswordModal()"></div>
-        <div class="modal-theme-fix w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden border border-white/10">
-            <div class="p-8 border-b border-white/5 flex justify-between items-center">
-                <div>
-                    <h3 class="text-xl font-black text-white flex items-center gap-2">
-                        <i class="fas fa-key text-indigo-400"></i>
-                        <span id="pwd-modal-title">Alterar Senha</span>
-                    </h3>
-                    <p id="pwd-modal-subtitle" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1"></p>
-                </div>
-                <button onclick="closePasswordModal()" class="text-gray-500 hover:text-white text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-8 space-y-5">
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Nova Senha</label>
-                    <div class="relative">
-                        <input type="password" id="pwd-new" placeholder="Digite a nova senha"
-                            class="w-full input-glass p-4 rounded-xl font-bold pr-12"
-                            oninput="checkPwdMatch()">
-                        <button type="button" onclick="togglePwdVisibility('pwd-new', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
-                            <i class="fas fa-eye text-sm"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Confirmar Senha</label>
-                    <div class="relative">
-                        <input type="password" id="pwd-confirm" placeholder="Repita a nova senha"
-                            class="w-full input-glass p-4 rounded-xl font-bold pr-12"
-                            oninput="checkPwdMatch()" onkeydown="if(event.key==='Enter') savePassword()">
-                        <button type="button" onclick="togglePwdVisibility('pwd-confirm', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
-                            <i class="fas fa-eye text-sm"></i>
-                        </button>
-                    </div>
-                </div>
-                <p id="pwd-match-msg" class="text-xs font-bold hidden"></p>
-                <button onclick="savePassword()" id="pwd-save-btn" disabled
-                    class="w-full btn-primary py-4 rounded-xl font-bold text-xs uppercase tracking-widest opacity-40 transition-opacity disabled:cursor-not-allowed">
-                    <i class="fas fa-check mr-2"></i>Salvar Nova Senha
-                </button>
-                <p class="text-[10px] text-gray-600 text-center font-medium">Mínimo de 4 caracteres</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Inscrição -->
-    <div id="booking-modal" class="fixed inset-0 z-[1000] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeBookingModal()"></div>
-        <div class="modal-theme-fix w-full max-w-4xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10">
-            <div class="p-10 border-b border-white/5 flex justify-between items-center">
-                <div>
-                    <h3 class="text-3xl font-black" id="booking-modal-title">Nova Reserva</h3>
-                    <p class="text-indigo-400 font-bold text-xs uppercase tracking-widest" id="booking-modal-subtitle">Preencha os dados oficiais</p>
-                </div>
-                <button onclick="closeBookingModal()" class="text-gray-500 hover:text-white text-2xl transition-colors"><i class="fas fa-times"></i></button>
-            </div>
-            
-            <form id="booking-form" class="p-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                <div class="md:col-span-2 space-y-4">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Participantes (Título + Nome)</label>
-                    <div id="player-rows" class="grid grid-cols-1 gap-4">
-                        <!-- 4 rows injected -->
-                    </div>
-                </div>
-
-                <div class="space-y-2" id="court-field-box">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Quadra *</label>
-                    <select id="field-court" class="w-full input-glass p-4 rounded-2xl font-bold"></select>
-                </div>
-                
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Atividade *</label>
-                    <select id="field-activity" required class="w-full input-glass p-4 rounded-2xl font-bold" onchange="toggleDuration()">
-                        <option value="Dupla">🎾 Jogo Dupla</option>
-                        <option value="Simples">🎾 Jogo Simples</option>
-                        <option value="Ranking infantil">🏆 Ranking Infantil</option>
-                        <option value="Ranking adulto">🏆 Ranking Adulto</option>
-                        <option value="Bate-bola">🔄 Bate-bola</option>
-                        <option value="Individual">🏃 Individual</option>
-                    </select>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Horário de Inscrição *</label>
-                    <input type="time" id="field-start" required class="w-full input-glass p-4 rounded-2xl font-bold">
-                </div>
-
-                <div id="dur-box" class="space-y-2 hidden">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Duração Fixa</label>
-                    <input type="text" value="60 minutos" readonly class="w-full input-glass p-4 rounded-2xl font-bold opacity-50">
-                </div>
-
-                <div class="md:col-span-2 space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Observação (Opcional)</label>
-                    <input type="text" id="field-observation" placeholder="Ex: Aula de teste, Convidado, etc." class="w-full input-glass p-4 rounded-2xl font-bold">
-                </div>
-
-                <div class="md:col-span-2 flex gap-4 pt-6">
-                    <button type="button" onclick="closeBookingModal()" class="flex-1 px-8 py-5 rounded-3xl font-black uppercase tracking-widest text-xs border border-white/10 hover:bg-white/5 transition-all">Cancelar</button>
-                    <button type="submit" id="booking-submit-btn" class="flex-1 btn-primary px-8 py-5 rounded-3xl font-black uppercase tracking-widest text-xs shadow-2xl">Salvar Reserva</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Admin Opções -->
-    <div id="admin-modal" class="fixed inset-0 z-[1000] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeAdminModal()"></div>
-        <div class="modal-theme-fix w-full max-w-md rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10">
-            <div class="p-10 border-b border-white/5 flex justify-between items-center">
-                <h3 class="text-2xl font-black" id="admin-court-title">Quadra</h3>
-                <button onclick="closeAdminModal()" class="text-gray-500 hover:text-white text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-8 space-y-4">
-                <div class="space-y-2 mb-4">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Observação do Status</label>
-                    <input type="text" id="admin-observation" placeholder="Ex: Chuva forte, Troca de rede, Prof. João" class="w-full input-glass p-4 rounded-2xl font-bold text-sm">
-                </div>
-                <div class="grid grid-cols-1 gap-3">
-                    <button onclick="setCourtStatus('lesson')" id="admin-lesson-btn" class="w-full py-5 rounded-2xl status-lesson font-black uppercase tracking-widest text-xs shadow-lg">Entrar em Aula</button>
-                    <button onclick="setCourtStatus('rain')" id="admin-rain-btn" class="w-full py-5 rounded-2xl status-rain font-black uppercase tracking-widest text-xs shadow-lg">Interrompido por Chuva</button>
-                    <button onclick="setCourtStatus('tournament')" id="admin-tournament-btn" class="w-full py-5 rounded-2xl status-tournament font-black uppercase tracking-widest text-xs shadow-lg">Campeonato</button>
-                    <button onclick="setCourtStatus('blocked')" id="admin-blocked-btn" class="w-full py-5 rounded-2xl status-blocked font-black uppercase tracking-widest text-xs shadow-lg">Bloquear Manutenção</button>
-                    <button onclick="setCourtStatus('free')" id="admin-free-btn" class="w-full py-5 rounded-2xl bg-white/5 hover:bg-white/10 transition-all font-black uppercase tracking-widest text-xs border border-white/10">Liberar Quadra</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Editar Jogo -->
-    <div id="edit-modal" class="fixed inset-0 z-[1000] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeEditModal()"></div>
-        <div class="modal-theme-fix w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10">
-            <div class="p-10 border-b border-white/5 flex justify-between items-center">
-                <h3 class="text-2xl font-black">Editar Agendamento</h3>
-                <button onclick="closeEditModal()" class="text-gray-500 hover:text-white text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-10 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                <div class="space-y-4">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Participantes (Título + Nome)</label>
-                    <div id="edit-player-rows" class="grid grid-cols-1 gap-4">
-                        <!-- Rows injected by JS -->
-                    </div>
-                </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Atividade</label>
-                    <select id="edit-activity" class="w-full input-glass p-4 rounded-2xl font-bold" onchange="updateActivityOptions('edit')">
-                        <option value="Dupla">🎾 Jogo Dupla</option>
-                        <option value="Simples">🎾 Jogo Simples</option>
-                        <option value="Ranking infantil">🏆 Ranking Infantil</option>
-                        <option value="Ranking adulto">🏆 Ranking Adulto</option>
-                        <option value="Bate-bola">🔄 Bate-bola</option>
-                        <option value="Individual">🏃 Individual</option>
-                    </select>
-                </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Observação</label>
-                    <input type="text" id="edit-observation" class="w-full input-glass p-4 rounded-2xl font-bold">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Inscrição</label>
-                        <input type="time" id="edit-registration" class="w-full input-glass p-4 rounded-2xl font-bold">
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Início</label>
-                        <input type="time" id="edit-start" class="w-full input-glass p-4 rounded-2xl font-bold">
-                    </div>
-                </div>
-                <button onclick="saveEdit()" id="edit-save-btn" class="w-full btn-primary py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg">Salvar Alterações</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar de Sócios -->
-    <div id="members-sidebar" class="fixed inset-0 z-[1050] hidden">
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeMemberModal()"></div>
-        <div class="absolute right-0 top-0 bottom-0 w-full max-w-lg bg-[var(--modal-bg)] border border-[var(--modal-border)] shadow-2xl border-l border-white/10 flex flex-col" style="height: 100dvh; max-height: 100dvh; overflow: hidden; transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);" id="members-sidebar-panel">
-            <!-- Header -->
-            <div class="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
-                <div>
-                    <h3 class="text-xl font-black text-white flex items-center gap-2"><i class="fas fa-users text-indigo-400"></i> Gerenciar Sócios</h3>
-                    <p id="members-count-label" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">0 títulos cadastrados</p>
-                </div>
-                <button onclick="closeMemberModal()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10"><i class="fas fa-times"></i></button>
-            </div>
-
-            <!-- Search -->
-            <div class="p-4 border-b border-white/5 shrink-0">
-                <div class="relative">
-                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
-                    <input type="text" id="members-search" placeholder="Buscar por título ou nome..." oninput="renderMembersList()" class="w-full input-glass pl-10 pr-4 py-3 rounded-xl text-sm font-bold">
-                </div>
-            </div>
-
-            <!-- Add New Member -->
-            <div class="p-4 border-b border-white/5 shrink-0">
-                <div class="bg-indigo-500/5 border border-indigo-500/15 rounded-2xl p-4 space-y-3">
-                    <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Adicionar Novo Título</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="new-member-title" placeholder="Nº Título" class="w-28 input-glass p-3 rounded-xl text-sm font-bold flex-shrink-0">
-                        <input type="text" id="new-member-name" placeholder="Nome do sócio" class="flex-1 input-glass p-3 rounded-xl text-sm font-bold" onkeydown="if(event.key==='Enter') addNewMember()">
-                        <button onclick="addNewMember()" class="px-4 py-3 rounded-xl bg-indigo-500 text-white font-black text-xs hover:brightness-110 transition-all flex-shrink-0"><i class="fas fa-plus"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Members List -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar" id="members-list-container">
-                <!-- Injected by JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Cadastro Sócio (mantido para retrocompatibilidade, mas não usado diretamente) -->
-    <div id="member-modal-legacy" class="hidden">
-        <form id="member-form">
-            <input type="text" id="mem-title">
-            <textarea id="mem-names"></textarea>
-        </form>
-    </div>
-
-    <!-- Modal Mover para Quadra -->
-    <div id="move-modal" class="fixed inset-0 z-[1000] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeMoveModal()"></div>
-        <div class="modal-theme-fix w-full max-w-md rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10">
-            <div class="p-10 border-b border-white/5 flex justify-between items-center">
-                <h3 class="text-2xl font-black">Mover para Quadra</h3>
-                <button onclick="closeMoveModal()" class="text-gray-500 hover:text-white text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-8 space-y-4">
-                <p class="text-sm text-gray-400 mb-4">Selecione o destino para este grupo:</p>
-                <div id="move-court-options" class="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto custom-scrollbar pr-2">
-                    <!-- Options injected by JS -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Editar Jogadores da Fila de Espera -->
-    <div id="waitlist-edit-modal" class="fixed inset-0 z-[1050] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeWaitlistEditModal()"></div>
-        <div class="modal-theme-fix w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10">
-            <div class="p-8 border-b border-white/5 flex justify-between items-center">
-                <div>
-                    <h3 class="text-xl font-black flex items-center gap-2">
-                        <i class="fas fa-pen text-indigo-400"></i> Editar Grupo da Fila
-                    </h3>
-                    <p id="waitlist-edit-subtitle" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1"></p>
-                </div>
-                <button onclick="closeWaitlistEditModal()" class="text-gray-500 hover:text-white text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
-                <!-- Atividade -->
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Atividade</label>
-                    <select id="we-activity" onchange="updateWaitlistEditPlayerRows()" class="w-full input-glass p-4 rounded-2xl font-bold text-sm">
-                        <option value="Dupla">🎾 Dupla</option>
-                        <option value="Simples">🏅 Simples</option>
-                        <option value="Bate-bola">🔄 Bate-bola</option>
-                        <option value="Individual">🏃 Individual</option>
-                        <option value="Ranking adulto">🏆 Ranking adulto</option>
-                        <option value="Ranking infantil">⭐ Ranking infantil</option>
-                    </select>
-                </div>
-                <!-- Jogadores -->
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Jogadores</label>
-                    <div id="we-player-rows" class="space-y-3"></div>
-                </div>
-                <!-- Horário de Inscrição -->
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Horário de Inscrição</label>
-                    <input type="time" id="we-registration-time" class="w-full input-glass p-4 rounded-2xl font-bold">
-                </div>
-                <!-- Observação -->
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Observação</label>
-                    <input type="text" id="we-observation" placeholder="Observação opcional..." class="w-full input-glass p-4 rounded-2xl font-bold">
-                </div>
-                <button onclick="saveWaitlistEdit()" class="w-full btn-primary py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg">
-                    <i class="fas fa-check mr-2"></i>Salvar Alterações
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Reversão de Atividade Encerrada (Tarefa F) -->
-    <div id="undo-modal" class="fixed inset-0 z-[1000] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeUndoModal()"></div>
-        <div class="modal-theme-fix w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10">
-            <div class="p-8 border-b border-white/5 flex justify-between items-center">
-                <h3 class="text-xl font-black flex items-center gap-3"><i class="fas fa-rotate-left text-amber-400"></i> Reverter Atividade</h3>
-                <button onclick="closeUndoModal()" class="text-gray-500 hover:text-white text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-6 space-y-4">
-                <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Atividades encerradas hoje — selecione para reverter:</p>
-                <div id="undo-list" class="space-y-3 max-h-[55vh] overflow-y-auto custom-scrollbar pr-1">
-                    <!-- Injected by JS -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Liberar Aula com horário de retorno (Tarefa H.3) -->
-    <div id="release-lesson-modal" class="fixed inset-0 z-[1001] hidden flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeReleaseLessonModal()"></div>
-        <div class="modal-theme-fix w-full max-w-sm rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/10">
-            <div class="p-8 border-b border-white/5 flex justify-between items-center">
-                <h3 class="text-lg font-black flex items-center gap-2"><i class="fas fa-clock text-amber-400"></i> Liberar Quadra de Aula</h3>
-                <button onclick="closeReleaseLessonModal()" class="text-gray-500 hover:text-white text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-6 space-y-4">
-                <p id="release-lesson-court-name" class="text-sm text-white font-bold"></p>
-                <p class="text-xs text-gray-400 leading-relaxed">Esta quadra voltará automaticamente para aula no próximo período, ou você pode liberar até um horário específico.</p>
-                <div class="grid grid-cols-1 gap-3 pt-2">
-                    <button onclick="releaseLessonUntilPeriodEnd()" class="w-full py-4 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-black text-xs uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all">
-                        <i class="fas fa-check mr-2"></i>Liberar até fim do período
-                    </button>
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Liberar até horário específico:</label>
-                        <div class="flex gap-2">
-                            <input type="time" id="release-lesson-until" class="flex-1 input-glass p-3 rounded-2xl font-bold text-sm">
-                            <button onclick="releaseLessonUntilTime()" class="px-4 py-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black text-xs uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all">OK</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+﻿// NÃO CONECTADO AO index.html — referência para modularização futura, ver prompt-reorganizacao-reservaquadras.md
 
     <script>
 // --- Helper: abrir/fechar modais com display:flex garantido ---
@@ -2421,7 +24,7 @@ const storage = {
             try {
                 return JSON.parse(val);
             } catch (e) {
-                return val; // Retorna como string se não for JSON
+                return val; // Retorna como string se nÃ£o for JSON
             }
         } catch (e) {
             console.warn(`LocalStorage access denied for ${key}. Using fallback.`);
@@ -2447,13 +50,13 @@ const storage = {
 
 // --- State & Config ---
 let state = {
-    courts: storage.get('rq_pro_courts', ["Quadra 1", "Quadra 2", "Quadra 3", "Quadra 4", "Quadra 5", "Quadra 6", "Quadra 7", "Quadra Rápida"]),
+    courts: storage.get('rq_pro_courts', ["Quadra 1", "Quadra 2", "Quadra 3", "Quadra 4", "Quadra 5", "Quadra 6", "Quadra 7", "Quadra RÃ¡pida"]),
     bookings: storage.get('rq_pro_bookings', []),
     waitlist: storage.get('rq_pro_waitlist', []),
     withdrawals: storage.get('rq_pro_withdrawals', []),
     history: Array.isArray(storage.get('rq_pro_history', [])) ? storage.get('rq_pro_history', []) : [], 
     members: storage.get('rq_pro_members', {
-        "1001": ["João Silva", "Maria Silva", "Pedro"],
+        "1001": ["JoÃ£o Silva", "Maria Silva", "Pedro"],
         "2002": ["Carlos Santos", "Ana"],
         "3003": ["Roberto Oliveira"],
         "4004": ["Fernando Costa", "Julia"]
@@ -2470,16 +73,16 @@ let state = {
 };
 
 // ============================================================
-// SISTEMA DE USUÁRIOS — 3 perfis: publico, diretora, esportes
+// SISTEMA DE USUÃRIOS â€” 3 perfis: publico, diretora, esportes
 // ============================================================
 const USER_PASSWORDS = {
     publico:  null,         // sem senha
-    diretora: 'diretora',  // senha padrão (altere aqui)
-    esportes: 'esportes'   // senha padrão (altere aqui)
+    diretora: 'diretora',  // senha padrÃ£o (altere aqui)
+    esportes: 'esportes'   // senha padrÃ£o (altere aqui)
 };
 
 const USER_ROLES = {
-    publico:  { label: 'Público',  icon: 'fas fa-users',        color: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', views: ['public'] },
+    publico:  { label: 'PÃºblico',  icon: 'fas fa-users',        color: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', views: ['public'] },
     diretora: { label: 'Diretora', icon: 'fas fa-chart-pie',    color: 'bg-purple-500/10 border-purple-500/30 text-purple-400',   views: ['home'] },
     esportes: { label: 'Esportes', icon: 'fas fa-shield-halved', color: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400',  views: ['home', 'public', 'admin', 'settings'] }
 };
@@ -2523,7 +126,7 @@ function backToUsers() {
 
 function loginAs(role) {
     currentUser = role;
-    storage.set('rq_pro_user', role); // Persistir usuário logado
+    storage.set('rq_pro_user', role); // Persistir usuÃ¡rio logado
     const info = USER_ROLES[role];
 
     // Esconde tela de login
@@ -2556,7 +159,7 @@ function applyRoleToNav(role) {
         el.style.display = '';
     });
 
-    // Bottom nav: ocultar botões que não pertencem a este perfil
+    // Bottom nav: ocultar botÃµes que nÃ£o pertencem a este perfil
     document.querySelectorAll('#mobile-bottom-nav .bottom-nav-btn').forEach(btn => {
         const views = (btn.getAttribute('data-views') || '').split(' ');
         const hasRole = views.includes(`nav-${role}`);
@@ -2567,7 +170,7 @@ function applyRoleToNav(role) {
 function logout() {
     currentUser = null;
     selectedUserForLogin = null;
-    storage.remove('rq_pro_user'); // Remover persistência do usuário
+    storage.remove('rq_pro_user'); // Remover persistÃªncia do usuÃ¡rio
     // Esconde todas as views
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
     // Mostra tela de login
@@ -2594,10 +197,10 @@ loadSavedPasswords();
 let pwdTargetUser = null;
 
 function openPasswordModal(role) {
-    if (currentUser !== 'esportes') return; // só esportes pode
+    if (currentUser !== 'esportes') return; // sÃ³ esportes pode
     pwdTargetUser = role;
     const info = USER_ROLES[role];
-    document.getElementById('pwd-modal-title').textContent = `Senha — ${info.label}`;
+    document.getElementById('pwd-modal-title').textContent = `Senha â€” ${info.label}`;
     document.getElementById('pwd-modal-subtitle').textContent = `Alterar senha de acesso do perfil ${info.label}`;
     document.getElementById('pwd-new').value = '';
     document.getElementById('pwd-confirm').value = '';
@@ -2634,7 +237,7 @@ function checkPwdMatch() {
     const btn = document.getElementById('pwd-save-btn');
 
     if (newPwd.length < 4) {
-        msg.textContent = 'Mínimo de 4 caracteres.';
+        msg.textContent = 'MÃ­nimo de 4 caracteres.';
         msg.className = 'text-xs font-bold text-amber-400';
         msg.classList.remove('hidden');
         btn.disabled = true;
@@ -2648,13 +251,13 @@ function checkPwdMatch() {
         return;
     }
     if (newPwd === confirm) {
-        msg.textContent = '✓ Senhas coincidem';
+        msg.textContent = 'âœ“ Senhas coincidem';
         msg.className = 'text-xs font-bold text-emerald-400';
         msg.classList.remove('hidden');
         btn.disabled = false;
         btn.classList.remove('opacity-40');
     } else {
-        msg.textContent = '✗ Senhas não coincidem';
+        msg.textContent = 'âœ— Senhas nÃ£o coincidem';
         msg.className = 'text-xs font-bold text-red-400';
         msg.classList.remove('hidden');
         btn.disabled = true;
@@ -2698,7 +301,7 @@ function toggleMobileMenu() {
     }
 }
 
-// Funções auxiliares para datas dinâmicas
+// FunÃ§Ãµes auxiliares para datas dinÃ¢micas
 function getTodayDate() {
     return getAccurateNow().toLocaleDateString('pt-BR');
 }
@@ -2708,7 +311,7 @@ function getWeekdayName() {
 }
 
 // --- Agendas Fixas ---
-// Suporta days: [1,2,3,4,5] (Seg-Sex), [6] (Sábado), [0] (Domingo)
+// Suporta days: [1,2,3,4,5] (Seg-Sex), [6] (SÃ¡bado), [0] (Domingo)
 const FIXED_SCHEDULES = {
     "Quadra 1": [
         { days: [1, 2, 3, 4, 5], start: "06:30", end: "11:00", status: "free" },
@@ -2741,7 +344,7 @@ const FIXED_SCHEDULES = {
         { days: [1, 2, 3, 4, 5], start: "14:30", end: "22:00", status: "lesson" },
         { days: [6, 0], start: "06:30", end: "22:00", status: "free" }
     ],
-    "Quadra Rápida": [
+    "Quadra RÃ¡pida": [
         { days: [1], start: "07:00", end: "12:00", status: "lesson" },
         { days: [1], start: "12:30", end: "18:00", status: "free" },
         { days: [1], start: "18:00", end: "22:00", status: "lesson" },
@@ -2756,10 +359,10 @@ const FIXED_SCHEDULES = {
     ]
 };
 
-// Função para obter o status atual de uma quadra com base nas agendas fixas
+// FunÃ§Ã£o para obter o status atual de uma quadra com base nas agendas fixas
 function getFixedStatus(courtName) {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+    const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = SÃ¡bado
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     
     const schedules = FIXED_SCHEDULES[courtName];
@@ -2792,19 +395,19 @@ let firebaseApp = null;
 let firebaseDb = null;
 let isCloudSyncing = false;
 
-// Função para encerrar todas as atividades às 22:00
+// FunÃ§Ã£o para encerrar todas as atividades Ã s 22:00
 function closeAllActivities() {
     const now = new Date();
     const currentDate = now.toLocaleDateString('pt-BR');
     
-    // Verificar se já encerramos hoje
+    // Verificar se jÃ¡ encerramos hoje
     if (lastClosingDate === currentDate) {
         return;
     }
     
     const currentHour = now.getHours();
     
-    // Verificar se é 22:00 ou depois
+    // Verificar se Ã© 22:00 ou depois
     if (currentHour < 22) {
         return;
     }
@@ -2835,7 +438,7 @@ function closeAllActivities() {
             } catch(e) {}
         }
         
-        // Adicionar ao histórico
+        // Adicionar ao histÃ³rico
         state.history.push({ 
             ...booking, 
             date: currentDate, 
@@ -2854,7 +457,7 @@ function closeAllActivities() {
     // Limpar todas as reservas
     state.bookings = [];
     
-    // Mover fila de espera para desistências
+    // Mover fila de espera para desistÃªncias
     const waitlistToClose = [...state.waitlist];
     for (const entry of waitlistToClose) {
         state.withdrawals.push({ 
@@ -2865,21 +468,21 @@ function closeAllActivities() {
     }
     state.waitlist = [];
     
-    // Atualizar a última data de encerramento
+    // Atualizar a Ãºltima data de encerramento
     lastClosingDate = currentDate;
     storage.set('last_closing_date', lastClosingDate);
     
     save();
     render();
     
-    // Mostrar notificação
-    showToast("Todas as atividades encerradas automaticamente às 22:00!", "info");
-    console.log("Todas as atividades encerradas automaticamente às 22:00");
+    // Mostrar notificaÃ§Ã£o
+    showToast("Todas as atividades encerradas automaticamente Ã s 22:00!", "info");
+    console.log("Todas as atividades encerradas automaticamente Ã s 22:00");
 }
 
 function connectFirebase() {
     if (!state.settings.firebaseConfig) {
-        showToast("Cole sua configuração do Firebase primeiro!", "warning");
+        showToast("Cole sua configuraÃ§Ã£o do Firebase primeiro!", "warning");
         return;
     }
 
@@ -2919,7 +522,7 @@ function connectFirebase() {
             statusEl.innerText = "CONECTADO";
             statusEl.classList.replace('text-gray-500', 'text-emerald-400');
         }
-        showToast("Conectado à Nuvem!", "success");
+        showToast("Conectado Ã  Nuvem!", "success");
     } catch (err) {
         console.error(err);
         showToast("Erro ao conectar ao Firebase!", "error");
@@ -2945,7 +548,7 @@ function toggleTheme() {
     applyTheme();
     save();
     
-    const labels = { 'dark': 'Escuro', 'light': 'Claro', 'auto': 'Automático' };
+    const labels = { 'dark': 'Escuro', 'light': 'Claro', 'auto': 'AutomÃ¡tico' };
     showToast(`Tema ${labels[state.settings.theme]} ativado`, 'info');
 }
 
@@ -2968,12 +571,12 @@ function updateThemeIcon() {
     if(iconMobile) iconMobile.className = iconClass + ' text-sm';
 }
 
-if(!state.courts.includes("Quadra Rápida")) {
-    state.courts.push("Quadra Rápida");
+if(!state.courts.includes("Quadra RÃ¡pida")) {
+    state.courts.push("Quadra RÃ¡pida");
     storage.set('rq_pro_courts', JSON.stringify(state.courts));
 }
 
-// Datas dinâmicas via funções getTodayDate() e getWeekdayName()
+// Datas dinÃ¢micas via funÃ§Ãµes getTodayDate() e getWeekdayName()
 
 function saveLocal() {
     storage.set('rq_pro_courts', state.courts);
@@ -3126,26 +729,26 @@ function updateActivityOptions(prefix = '') {
     const currentValue = select.value;
     let options = '';
     if (count === 1) {
-        options = '<option value="Individual">🏃 Individual</option>';
+        options = '<option value="Individual">ðŸƒ Individual</option>';
     } else if (count === 2) {
         options = `
-            <option value="Simples">🎾 Jogo Simples</option>
-            <option value="Ranking infantil">🏆 Ranking Infantil</option>
-            <option value="Ranking adulto">🏆 Ranking Adulto</option>
-            <option value="Bate-bola">🔄 Bate-bola</option>
+            <option value="Simples">ðŸŽ¾ Jogo Simples</option>
+            <option value="Ranking infantil">ðŸ† Ranking Infantil</option>
+            <option value="Ranking adulto">ðŸ† Ranking Adulto</option>
+            <option value="Bate-bola">ðŸ”„ Bate-bola</option>
         `;
     } else if (count === 3) {
-        options = '<option value="Bate-bola">🔄 Bate-bola</option>';
+        options = '<option value="Bate-bola">ðŸ”„ Bate-bola</option>';
     } else if (count === 4) {
-        options = '<option value="Dupla">🎾 Jogo Dupla</option>';
+        options = '<option value="Dupla">ðŸŽ¾ Jogo Dupla</option>';
     } else {
         options = `
-            <option value="Dupla">🎾 Jogo Dupla</option>
-            <option value="Simples">🎾 Jogo Simples</option>
-            <option value="Ranking infantil">🏆 Ranking Infantil</option>
-            <option value="Ranking adulto">🏆 Ranking Adulto</option>
-            <option value="Bate-bola">🔄 Bate-bola</option>
-            <option value="Individual">🏃 Individual</option>
+            <option value="Dupla">ðŸŽ¾ Jogo Dupla</option>
+            <option value="Simples">ðŸŽ¾ Jogo Simples</option>
+            <option value="Ranking infantil">ðŸ† Ranking Infantil</option>
+            <option value="Ranking adulto">ðŸ† Ranking Adulto</option>
+            <option value="Bate-bola">ðŸ”„ Bate-bola</option>
+            <option value="Individual">ðŸƒ Individual</option>
         `;
     }
     select.innerHTML = options;
@@ -3162,12 +765,12 @@ function openBookingModal(mode = 'court') {
     const subtitleEl = document.getElementById('booking-modal-subtitle');
     const courtBox = document.getElementById('court-field-box');
     if(mode === 'queue') {
-        titleEl.innerText = "Inscrição na Fila";
+        titleEl.innerText = "InscriÃ§Ã£o na Fila";
         subtitleEl.innerText = "Entrar na fila de espera global";
         courtBox.classList.add('hidden');
         document.getElementById('field-court').required = false;
     } else {
-        titleEl.innerText = "Inscrição Direta";
+        titleEl.innerText = "InscriÃ§Ã£o Direta";
         subtitleEl.innerText = "Alocar diretamente em uma quadra livre";
         courtBox.classList.remove('hidden');
         document.getElementById('field-court').required = true;
@@ -3182,7 +785,7 @@ function openBookingModal(mode = 'court') {
     for(let i=0; i<4; i++) {
         container.innerHTML += `
             <div class="grid grid-cols-2 gap-4">
-                <input type="text" placeholder="Título" oninput="searchMember(${i}, this.value)" class="input-glass p-4 rounded-2xl text-sm font-bold">
+                <input type="text" placeholder="TÃ­tulo" oninput="searchMember(${i}, this.value)" class="input-glass p-4 rounded-2xl text-sm font-bold">
                 <select id="p-name-${i}" onchange="updateActivityOptions()" class="input-glass p-4 rounded-2xl text-sm font-bold">
                     <option value="">Nome...</option>
                 </select>
@@ -3232,7 +835,7 @@ function searchMember(idx, title, prefix = '') {
         select.innerHTML = '<option value="">Selecionar Nome...</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
         updateActivityOptions(prefix);
     } else {
-        select.innerHTML = '<option value="">Título não encontrado</option>';
+        select.innerHTML = '<option value="">TÃ­tulo nÃ£o encontrado</option>';
         updateActivityOptions(prefix);
     }
     select.onchange = () => {
@@ -3241,7 +844,7 @@ function searchMember(idx, title, prefix = '') {
         const alreadyPlayedDupla = state.history.some(h => 
             h.date === getTodayDate() && h.activity === "Dupla" && h.titles && h.titles.includes(cleanTitle) && h.players && h.players.includes(selectedName)
         );
-        if(alreadyPlayedDupla) showToast(`O sócio ${selectedName} (Título ${cleanTitle}) já jogou Dupla hoje! Ficará sem preferência (Regra 6.2).`, 'warning');
+        if(alreadyPlayedDupla) showToast(`O sÃ³cio ${selectedName} (TÃ­tulo ${cleanTitle}) jÃ¡ jogou Dupla hoje! FicarÃ¡ sem preferÃªncia (Regra 6.2).`, 'warning');
         updateActivityOptions(prefix);
     };
 }
@@ -3261,7 +864,7 @@ function openMemberModal() {
     if (!sidebar || !panel) return;
     sidebar.classList.remove('hidden');
     sidebar.style.display = 'block';
-    // Força reflow antes de animar
+    // ForÃ§a reflow antes de animar
     panel.getBoundingClientRect();
     panel.style.transform = 'translateX(0)';
     renderMembersList();
@@ -3291,10 +894,10 @@ function renderMembersList() {
           )
         : entries;
 
-    if (countLabel) countLabel.textContent = `${entries.length} título${entries.length !== 1 ? 's' : ''} cadastrado${entries.length !== 1 ? 's' : ''}`;
+    if (countLabel) countLabel.textContent = `${entries.length} tÃ­tulo${entries.length !== 1 ? 's' : ''} cadastrado${entries.length !== 1 ? 's' : ''}`;
 
     if (filtered.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500 py-10 font-bold text-sm">${search ? 'Nenhum resultado encontrado.' : 'Nenhum sócio cadastrado.'}</p>`;
+        container.innerHTML = `<p class="text-center text-gray-500 py-10 font-bold text-sm">${search ? 'Nenhum resultado encontrado.' : 'Nenhum sÃ³cio cadastrado.'}</p>`;
         return;
     }
 
@@ -3304,7 +907,7 @@ function renderMembersList() {
         <div class="glass-card p-4 rounded-2xl border border-white/10">
             <div class="flex justify-between items-start gap-2">
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-indigo-400 uppercase tracking-widest">Título ${title}</p>
+                    <p class="text-xs font-black text-indigo-400 uppercase tracking-widest">TÃ­tulo ${title}</p>
                     <div class="mt-2 space-y-1">
                         ${nameList.map((name, idx) => `
                         <div class="flex items-center justify-between gap-2 py-1 border-b border-white/5 last:border-0">
@@ -3326,25 +929,25 @@ function addNewMember() {
     if (!titleInput || !nameInput) return;
     const title = titleInput.value.trim();
     const name = nameInput.value.trim();
-    if (!title || !name) { showToast('Preencha o número do título e o nome.', 'warning'); return; }
+    if (!title || !name) { showToast('Preencha o nÃºmero do tÃ­tulo e o nome.', 'warning'); return; }
     if (!state.members) state.members = {};
     if (!state.members[title]) state.members[title] = [];
     if (!Array.isArray(state.members[title])) state.members[title] = [state.members[title]];
-    if (state.members[title].includes(name)) { showToast('Este nome já está cadastrado neste título.', 'warning'); return; }
+    if (state.members[title].includes(name)) { showToast('Este nome jÃ¡ estÃ¡ cadastrado neste tÃ­tulo.', 'warning'); return; }
     state.members[title].push(name);
     save();
     titleInput.value = '';
     nameInput.value = '';
     renderMembersList();
-    showToast(`${name} adicionado ao título ${title}!`, 'success');
+    showToast(`${name} adicionado ao tÃ­tulo ${title}!`, 'success');
 }
 
 function deleteMemberTitle(title) {
-    if (!confirm(`Excluir o título ${title} e todos os seus sócios?`)) return;
+    if (!confirm(`Excluir o tÃ­tulo ${title} e todos os seus sÃ³cios?`)) return;
     delete state.members[title];
     save();
     renderMembersList();
-    showToast(`Título ${title} removido.`, 'success');
+    showToast(`TÃ­tulo ${title} removido.`, 'success');
 }
 
 function removeMemberName(title, idx) {
@@ -3358,18 +961,18 @@ function removeMemberName(title, idx) {
     }
     save();
     renderMembersList();
-    showToast('Sócio removido.', 'success');
+    showToast('SÃ³cio removido.', 'success');
 }
 
 function addNameToTitle(title) {
-    const name = prompt(`Adicionar nome ao título ${title}:`);
+    const name = prompt(`Adicionar nome ao tÃ­tulo ${title}:`);
     if (!name || !name.trim()) return;
     if (!Array.isArray(state.members[title])) state.members[title] = [state.members[title]].filter(Boolean);
-    if (state.members[title].includes(name.trim())) { showToast('Nome já cadastrado neste título.', 'warning'); return; }
+    if (state.members[title].includes(name.trim())) { showToast('Nome jÃ¡ cadastrado neste tÃ­tulo.', 'warning'); return; }
     state.members[title].push(name.trim());
     save();
     renderMembersList();
-    showToast(`${name.trim()} adicionado ao título ${title}!`, 'success');
+    showToast(`${name.trim()} adicionado ao tÃ­tulo ${title}!`, 'success');
 }
 
 
@@ -3423,7 +1026,7 @@ function openEditModal(court) {
             
             container.innerHTML += `
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="edit-p-title-${i}" value="${title}" placeholder="Título" oninput="searchMember(${i}, this.value, 'edit')" class="input-glass p-4 rounded-2xl text-sm font-bold">
+                    <input type="text" id="edit-p-title-${i}" value="${title}" placeholder="TÃ­tulo" oninput="searchMember(${i}, this.value, 'edit')" class="input-glass p-4 rounded-2xl text-sm font-bold">
                     <select id="edit-p-name-${i}" onchange="updateActivityOptions('edit')" class="input-glass p-4 rounded-2xl text-sm font-bold">
                         <option value="">Nome...</option>
                     </select>
@@ -3464,7 +1067,7 @@ function saveEdit() {
         if((activity === "Simples" || activity === "Ranking infantil" || activity === "Ranking adulto") && players.length !== 2) return showToast(`A atividade ${activity} exige exatamente 2 jogadores!`, "error");
         if(activity === "Individual" && players.length !== 1) return showToast("Atividade Individual exige exatamente 1 jogador!", "error");
         if(activity === "Bate-bola" && (players.length < 2 || players.length > 3)) {
-            if(players.length === 4) return showToast("Com 4 jogadores, selecione a opção Dupla!", "error");
+            if(players.length === 4) return showToast("Com 4 jogadores, selecione a opÃ§Ã£o Dupla!", "error");
             return showToast("Bate-bola permitido para 2 ou 3 jogadores!", "error");
         }
 
@@ -3481,7 +1084,7 @@ function saveEdit() {
             b.endTime = end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
         save(); render(); closeEditModal();
-        showToast("Alterações salvas!", "success");
+        showToast("AlteraÃ§Ãµes salvas!", "success");
     }
 }
 
@@ -3493,7 +1096,7 @@ if(memberForm) {
         const names = document.getElementById('mem-names').value.split(',').map(n => n.trim()).filter(n => n !== '');
         if(title && names.length > 0) {
             state.members[title] = names;
-            save(); showToast(`Sócio ${title} cadastrado com sucesso!`, 'success');
+            save(); showToast(`SÃ³cio ${title} cadastrado com sucesso!`, 'success');
             closeMemberModal(); document.getElementById('member-form').reset();
         }
     };
@@ -3502,7 +1105,7 @@ if(memberForm) {
 function setCourtStatus(type) {
     const obs = document.getElementById('admin-observation').value.trim();
     if(type === 'free') {
-        // Se for liberar, usar a função releaseCourt que adiciona ao histórico
+        // Se for liberar, usar a funÃ§Ã£o releaseCourt que adiciona ao histÃ³rico
         releaseCourt(state.activeAdminCourt);
     } else {
         // Para outros status, remover qualquer reserva existente e adicionar o novo status
@@ -3538,7 +1141,7 @@ if(bookingForm) {
         if((activity === "Simples" || activity === "Ranking infantil" || activity === "Ranking adulto") && players.length !== 2) return showToast(`A atividade ${activity} exige exatamente 2 jogadores!`, "error");
         if(activity === "Individual" && players.length !== 1) return showToast("Atividade Individual exige exatamente 1 jogador!", "error");
         if(activity === "Bate-bola" && (players.length < 2 || players.length > 3)) {
-            if(players.length === 4) return showToast("Com 4 jogadores, selecione a opção Dupla!", "error");
+            if(players.length === 4) return showToast("Com 4 jogadores, selecione a opÃ§Ã£o Dupla!", "error");
             return showToast("Bate-bola permitido para 2 ou 3 jogadores!", "error");
         }
         const entry = {
@@ -3547,7 +1150,7 @@ if(bookingForm) {
             startTime: null, endTime: null, observation: document.getElementById('field-observation').value.trim(), players, titles, repeat
         };
         if(currentBookingMode === 'queue') {
-            state.waitlist.push(entry); showToast("Adicionado à fila de espera!", "info"); save();
+            state.waitlist.push(entry); showToast("Adicionado Ã  fila de espera!", "info"); save();
         } else processEntry(entry);
         closeBookingModal(); render();
     };
@@ -3558,7 +1161,7 @@ function processEntry(entry) {
     const occupied = state.bookings.find(b => b.court === court);
     if(occupied || entry.repeat) {
         state.waitlist.push(entry);
-        if(entry.repeat) showToast("Sócio já jogou hoje: Fim da fila.", "warning");
+        if(entry.repeat) showToast("SÃ³cio jÃ¡ jogou hoje: Fim da fila.", "warning");
         else showToast("Quadra ocupada: Movido para a fila.", "info");
     } else {
         entry.startTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -3612,7 +1215,7 @@ function updateSettings() {
             }
         }
     } catch(e) { 
-        showToast("Erro no formato da Base de Dados! Use JSON válido.", "error"); 
+        showToast("Erro no formato da Base de Dados! Use JSON vÃ¡lido.", "error"); 
         return; 
     }
 
@@ -3639,7 +1242,7 @@ function updateSettings() {
     }
 
     save(); 
-    showToast("Configurações salvas com sucesso!", "success"); 
+    showToast("ConfiguraÃ§Ãµes salvas com sucesso!", "success"); 
     render();
 }
 
@@ -3676,7 +1279,7 @@ function render() {
 function togglePerformanceMode() {
     state.settings.performanceMode = document.getElementById('set-performance').checked;
     save();
-    showToast(state.settings.performanceMode ? "Modo Performance Ativado! Recarregue se necessário." : "Modo Visual Ativado!", "info");
+    showToast(state.settings.performanceMode ? "Modo Performance Ativado! Recarregue se necessÃ¡rio." : "Modo Visual Ativado!", "info");
     
     const canvas = document.getElementById('tennis-canvas');
     const glass = document.getElementById('glass-overlay');
@@ -3802,7 +1405,7 @@ function updateDashboard() {
                         <div class="flex gap-2">
                             <div class="flex-1">
                                 <div class="flex justify-between text-[10px] text-gray-500 mb-1">
-                                    <span>Manhã</span>
+                                    <span>ManhÃ£</span>
                                     <span>${court.lessonPeriods.morning.occupancyRate.toFixed(1)}%</span>
                                 </div>
                                 <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -3854,7 +1457,7 @@ function updateDashboard() {
                     <div class="flex gap-2">
                         <div class="flex-1">
                             <div class="flex justify-between text-xs text-gray-500 mb-1">
-                                <span>Manhã</span>
+                                <span>ManhÃ£</span>
                                 <span>${court.periods.morning.occupancyRate.toFixed(1)}%</span>
                             </div>
                             <div class="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -3927,19 +1530,19 @@ function updateDashboard() {
     }
 }
 
-// exportDashboardData: versão aprimorada G.2 declarada abaixo.
-// exportWithdrawals: versão aprimorada G.5 declarada abaixo.
+// exportDashboardData: versÃ£o aprimorada G.2 declarada abaixo.
+// exportWithdrawals: versÃ£o aprimorada G.5 declarada abaixo.
 
 function exportFullSystemData() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 4));
     const link = document.createElement('a');
     link.setAttribute("href", dataStr); link.setAttribute("download", `backup_sistema_quadras_${new Date().toISOString().split('T')[0]}.json`);
     document.body.appendChild(link); link.click(); link.remove();
-    showToast("Backup do sistema concluído!", "success");
+    showToast("Backup do sistema concluÃ­do!", "success");
 }
 
 const PERIODS = {
-    morning: { name: "Manhã", startHour: 6, startMinute: 30, endHour: 12, endMinute: 30, totalMinutes: 360 },
+    morning: { name: "ManhÃ£", startHour: 6, startMinute: 30, endHour: 12, endMinute: 30, totalMinutes: 360 },
     afternoon: { name: "Tarde", startHour: 12, startMinute: 31, endHour: 18, endMinute: 30, totalMinutes: 360 },
     evening: { name: "Noite", startHour: 18, startMinute: 31, endHour: 22, endMinute: 0, totalMinutes: 210 }
 };
@@ -4063,10 +1666,10 @@ function calculateOccupancyAnalytics(startDate, endDate) {
         Object.keys(PERIODS).forEach(period => {
             const totalPeriodMinutes = PERIODS[period].totalMinutes * daysInRange;
             court.periods[period].occupancyRate = totalPeriodMinutes > 0 
-                ? Math.min((court.periods[period].occupiedMinutes / totalPeriodMinutes) * 100, 100) 
+                ? (court.periods[period].occupiedMinutes / totalPeriodMinutes) * 100 
                 : 0;
             court.lessonPeriods[period].occupancyRate = totalPeriodMinutes > 0 
-                ? Math.min((court.lessonPeriods[period].occupiedMinutes / totalPeriodMinutes) * 100, 100) 
+                ? (court.lessonPeriods[period].occupiedMinutes / totalPeriodMinutes) * 100 
                 : 0;
         });
     });
@@ -4085,8 +1688,8 @@ function calculateOccupancyAnalytics(startDate, endDate) {
         : 0;
     
     const totalAvailableMinutes = state.courts.length * (PERIODS.morning.totalMinutes + PERIODS.afternoon.totalMinutes + PERIODS.evening.totalMinutes) * daysInRange;
-    const lessonsRate = totalAvailableMinutes > 0 ? Math.min((activityData.lessons.totalMinutes / totalAvailableMinutes) * 100, 100) : 0;
-    const otherRate = totalAvailableMinutes > 0 ? Math.min((activityData.other.totalMinutes / totalAvailableMinutes) * 100, 100) : 0;
+    const lessonsRate = totalAvailableMinutes > 0 ? (activityData.lessons.totalMinutes / totalAvailableMinutes) * 100 : 0;
+    const otherRate = totalAvailableMinutes > 0 ? (activityData.other.totalMinutes / totalAvailableMinutes) * 100 : 0;
     
     return {
         dateRange: { start: startDate, end: endDate },
@@ -4116,17 +1719,17 @@ function exportOccupancyByCourt() {
     const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
-    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
+    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupaÃ§Ã£o para exportar!", "warning");
     
     const sep = ";";
     const headers = [
         "Quadra", 
         "Total de Jogo (min)", 
         "Total de Jogo (horas)",
-        "Ocupação Manhã (%)", 
-        "Ocupação Tarde (%)", 
-        "Ocupação Noite (%)",
-        "Minutos Manhã",
+        "OcupaÃ§Ã£o ManhÃ£ (%)", 
+        "OcupaÃ§Ã£o Tarde (%)", 
+        "OcupaÃ§Ã£o Noite (%)",
+        "Minutos ManhÃ£",
         "Minutos Tarde",
         "Minutos Noite"
     ];
@@ -4152,7 +1755,7 @@ function exportOccupancyByCourt() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast("Dados de ocupação por quadra exportados!", "success");
+    showToast("Dados de ocupaÃ§Ã£o por quadra exportados!", "success");
 }
 
 function exportOccupancyHourly() {
@@ -4160,7 +1763,7 @@ function exportOccupancyHourly() {
     const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
-    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
+    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupaÃ§Ã£o para exportar!", "warning");
     
     const sep = ";";
     const headers = ["Quadra", ...Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}h`)];
@@ -4187,29 +1790,29 @@ function exportOccupancySummary() {
     const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
-    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
+    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupaÃ§Ã£o para exportar!", "warning");
     
     const sep = ";";
     const content = [
-        ["RELATÓRIO DE OCUPAÇÃO DE QUADRAS"],
+        ["RELATÃ“RIO DE OCUPAÃ‡ÃƒO DE QUADRAS"],
         [""],
-        ["Período Analisado", `${startDate.toLocaleDateString("pt-BR")} - ${endDate.toLocaleDateString("pt-BR")}`],
+        ["PerÃ­odo Analisado", `${startDate.toLocaleDateString("pt-BR")} - ${endDate.toLocaleDateString("pt-BR")}`],
         [""],
         ["INDICADORES GERAIS"],
-        ["Taxa Média de Ocupação", `${analytics.overall.averageOccupancyRate.toFixed(2)}%`],
+        ["Taxa MÃ©dia de OcupaÃ§Ã£o", `${analytics.overall.averageOccupancyRate.toFixed(2)}%`],
         ["Total de Horas de Jogo", formatHours(analytics.overall.totalPlayMinutes)],
         ["Total de Quadras", analytics.courts.length],
         [""],
         ["DADOS POR TIPO DE ATIVIDADE"],
         ["Aulas - Total de Horas", formatHours(analytics.activityData.lessons.totalMinutes)],
-        ["Aulas - Número de Sessões", analytics.activityData.lessons.count],
-        ["Aulas - Taxa de Ocupação", `${analytics.activityData.lessonsRate.toFixed(2)}%`],
+        ["Aulas - NÃºmero de SessÃµes", analytics.activityData.lessons.count],
+        ["Aulas - Taxa de OcupaÃ§Ã£o", `${analytics.activityData.lessonsRate.toFixed(2)}%`],
         ["Outras Atividades - Total de Horas", formatHours(analytics.activityData.other.totalMinutes)],
-        ["Outras Atividades - Número de Sessões", analytics.activityData.other.count],
-        ["Outras Atividades - Taxa de Ocupação", `${analytics.activityData.otherRate.toFixed(2)}%`],
+        ["Outras Atividades - NÃºmero de SessÃµes", analytics.activityData.other.count],
+        ["Outras Atividades - Taxa de OcupaÃ§Ã£o", `${analytics.activityData.otherRate.toFixed(2)}%`],
         [""],
-        ["TAXA MÉDIA POR PERÍODO"],
-        ["Manhã (06:30-12:30)", `${analytics.overall.averageByPeriod.morning.toFixed(2)}%`],
+        ["TAXA MÃ‰DIA POR PERÃODO"],
+        ["ManhÃ£ (06:30-12:30)", `${analytics.overall.averageByPeriod.morning.toFixed(2)}%`],
         ["Tarde (12:31-18:30)", `${analytics.overall.averageByPeriod.afternoon.toFixed(2)}%`],
         ["Noite (18:31-22:00)", `${analytics.overall.averageByPeriod.evening.toFixed(2)}%`],
         [""],
@@ -4229,7 +1832,7 @@ function exportOccupancySummary() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast("Resumo de ocupação exportado!", "success");
+    showToast("Resumo de ocupaÃ§Ã£o exportado!", "success");
 }
 
 function exportOccupancyByActivity() {
@@ -4237,14 +1840,14 @@ function exportOccupancyByActivity() {
     const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
-    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
+    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupaÃ§Ã£o para exportar!", "warning");
     
     const sep = ";";
     const headers = [
         "Tipo de Atividade", 
         "Total de Horas", 
         "Total de Minutos",
-        "Número de Sessões",
+        "NÃºmero de SessÃµes",
         "Percentual do Total (%)"
     ];
     
@@ -4268,10 +1871,10 @@ function exportOccupancyByActivity() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast("Dados de ocupação por atividade exportados!", "success");
+    showToast("Dados de ocupaÃ§Ã£o por atividade exportados!", "success");
 }
 
-// exportOccupancyComplete: versão aprimorada G.4 declarada abaixo.
+// exportOccupancyComplete: versÃ£o aprimorada G.4 declarada abaixo.
 
 function importFullSystemData(input) {
     const file = input.files[0]; if (!file) return;
@@ -4279,7 +1882,7 @@ function importFullSystemData(input) {
     reader.onload = (e) => {
         try {
             const importedState = JSON.parse(e.target.result);
-            if (confirm("Isso irá substituir TODOS os dados atuais. Deseja continuar?")) {
+            if (confirm("Isso irÃ¡ substituir TODOS os dados atuais. Deseja continuar?")) {
                 state = { ...state, ...importedState }; save(); render();
                 showToast("Dados restaurados com sucesso!", "success");
             }
@@ -4312,10 +1915,10 @@ function renderPublic() {
         let bgClass = "bg-white/5", statusLabel = "LIVRE", players = "Pronta para uso", statusColor = "bg-emerald-500/10 text-emerald-400";
         
         if(b) {
-            if(b.type === 'blocked') { bgClass = "status-blocked"; statusLabel = "BLOQUEADA"; players = "MANUTENÇÃO"; statusColor = "bg-white/20 text-white"; }
+            if(b.type === 'blocked') { bgClass = "status-blocked"; statusLabel = "BLOQUEADA"; players = "MANUTENÃ‡ÃƒO"; statusColor = "bg-white/20 text-white"; }
             else if(b.type === 'lesson') { bgClass = "status-lesson"; statusLabel = "AULA"; players = "QUADRA EM AULA"; statusColor = "bg-white/20 text-white"; }
             else if(b.type === 'rain') { bgClass = "status-rain"; statusLabel = "CHUVA"; players = "QUADRA MOLHADA"; statusColor = "bg-white/20 text-white"; }
-            else if(b.type === 'tournament') { bgClass = "status-tournament"; statusLabel = "TORNEIO"; players = "COMPETIÇÃO ATIVA"; statusColor = "bg-white/20 text-white"; }
+            else if(b.type === 'tournament') { bgClass = "status-tournament"; statusLabel = "TORNEIO"; players = "COMPETIÃ‡ÃƒO ATIVA"; statusColor = "bg-white/20 text-white"; }
             else { bgClass = "bg-indigo-500/10"; statusLabel = "OCUPADA"; players = b.players.map(p => `<div class="truncate border-b border-white/5 pb-1 last:border-0">${p}</div>`).join(''); statusColor = "bg-indigo-500/20 text-indigo-300"; }
         }
         
@@ -4340,12 +1943,12 @@ function renderPublic() {
                     ${b && !b.type ? `
                         <div class="flex justify-between items-center border-t border-white/10 pt-4 mt-2">
                             <div class="flex flex-col">
-                                <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Início</p>
+                                <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">InÃ­cio</p>
                                 <p class="text-2xl font-bold text-emerald-400 tracking-tight">${b.startTime || '--:--'}</p>
                             </div>
                             ${b.endTime ? `
                                 <div class="text-right">
-                                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Previsão</p>
+                                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">PrevisÃ£o</p>
                                     <p class="text-base font-bold text-purple-400 opacity-90">${b.endTime}</p>
                                 </div>
                             ` : ''}
@@ -4379,7 +1982,7 @@ function renderPublic() {
 }
 
 // ============================================================
-// ABA PÚBLICO — Sub-tabs: Status | Análise
+// ABA PÃšBLICO â€” Sub-tabs: Status | AnÃ¡lise
 // ============================================================
 
 let currentAnalyticsPeriod = 'rolling';
@@ -4396,17 +1999,25 @@ function switchPublicTab(tab) {
     if (tab === 'status') {
         panelStatus.classList.remove('hidden');
         panelAnalytics.classList.add('hidden');
-        btnStatus.classList.add('bg-indigo-600','text-white','shadow-lg');
-        btnStatus.classList.remove('text-gray-400','hover:text-white','hover:bg-white/5');
-        btnAnalytics.classList.remove('bg-indigo-600','text-white','shadow-lg');
-        btnAnalytics.classList.add('text-gray-400','hover:text-white','hover:bg-white/5');
+        if (btnStatus) {
+            btnStatus.classList.add('bg-indigo-600','text-white','shadow-lg');
+            btnStatus.classList.remove('text-gray-400','hover:text-white','hover:bg-white/5');
+        }
+        if (btnAnalytics) {
+            btnAnalytics.classList.remove('bg-indigo-600','text-white','shadow-lg');
+            btnAnalytics.classList.add('text-gray-400','hover:text-white','hover:bg-white/5');
+        }
     } else {
         panelStatus.classList.add('hidden');
         panelAnalytics.classList.remove('hidden');
-        btnAnalytics.classList.add('bg-indigo-600','text-white','shadow-lg');
-        btnAnalytics.classList.remove('text-gray-400','hover:text-white','hover:bg-white/5');
-        btnStatus.classList.remove('bg-indigo-600','text-white','shadow-lg');
-        btnStatus.classList.add('text-gray-400','hover:text-white','hover:bg-white/5');
+        if (btnAnalytics) {
+            btnAnalytics.classList.add('bg-indigo-600','text-white','shadow-lg');
+            btnAnalytics.classList.remove('text-gray-400','hover:text-white','hover:bg-white/5');
+        }
+        if (btnStatus) {
+            btnStatus.classList.remove('bg-indigo-600','text-white','shadow-lg');
+            btnStatus.classList.add('text-gray-400','hover:text-white','hover:bg-white/5');
+        }
         renderPublicAnalytics();
     }
 }
@@ -4414,7 +2025,7 @@ function switchPublicTab(tab) {
 function changeAnalyticsPeriod(period) {
     currentAnalyticsPeriod = period;
     
-    // Atualizar botões
+    // Atualizar botÃµes
     const btnDay = document.getElementById('btn-period-day');
     const btnWeek = document.getElementById('btn-period-week');
     const btnRolling = document.getElementById('btn-period-rolling');
@@ -4441,12 +2052,12 @@ function changeAnalyticsPeriod(period) {
 
     if (subtitle) {
         const labels = { 
-            'day': 'Hoje', 'week': 'Últimos 7 dias', 'rolling': 'Últimos 28 dias' };
-        subtitle.innerText = `Dados: ${labels[period]} — transparência para os sócios`;
+            'day': 'Hoje', 'week': 'Ãšltimos 7 dias', 'rolling': 'Ãšltimos 28 dias' };
+        subtitle.innerText = `Dados: ${labels[period]} â€” transparÃªncia para os sÃ³cios`;
         
-        if (labelTotal) labelTotal.innerText = period === 'day' ? 'Jogos Hoje' : (period === 'week' ? 'Jogos na Semana' : 'Jogos nos Últimos 28 dias');
-        if (labelHours) labelHours.innerText = period === 'day' ? 'Horas Hoje' : (period === 'week' ? 'Horas na Semana' : 'Horas nos Últimos 28 dias');
-        if (labelBusiest) labelBusiest.innerText = period === 'day' ? 'Horário de Pico' : 'Dia Mais Movido';
+        if (labelTotal) labelTotal.innerText = period === 'day' ? 'Jogos Hoje' : (period === 'week' ? 'Jogos na Semana' : 'Jogos nos Ãšltimos 28 dias');
+        if (labelHours) labelHours.innerText = period === 'day' ? 'Horas Hoje' : (period === 'week' ? 'Horas na Semana' : 'Horas nos Ãšltimos 28 dias');
+        if (labelBusiest) labelBusiest.innerText = period === 'day' ? 'HorÃ¡rio de Pico' : 'Dia Mais Movido';
         if (labelCourtOcc) labelCourtOcc.innerText = labels[period];
     }
     
@@ -4474,7 +2085,7 @@ function renderPublicAnalytics() {
         analytics = calculateOccupancyAnalytics(startDate, endDate);
     }
 
-    // Função de cor de barra
+    // FunÃ§Ã£o de cor de barra
     const barColor = (rate) => {
         if (rate < 25) return 'bg-emerald-500';
         if (rate < 50) return 'bg-yellow-500';
@@ -4505,7 +2116,7 @@ function renderPublicAnalytics() {
     if (elHours) elHours.innerText = totalHours + 'h';
     if (elOcc) elOcc.innerText = avgOcc.toFixed(1) + '%';
 
-    // Dia mais movido ou Horário de Pico
+    // Dia mais movido ou HorÃ¡rio de Pico
     const elDay = document.getElementById('pub-stat-busiest-day');
     const elDayCount = document.getElementById('pub-stat-busiest-day-count');
 
@@ -4526,7 +2137,7 @@ function renderPublicAnalytics() {
         if (elDay) elDay.innerText = peakHour !== -1 && peakCount > 0 ? `${peakHour}:00` : '--';
         if (elDayCount) elDayCount.innerText = peakCount > 0 ? `${peakCount} entradas` : '-- atividades';
     } else {
-        const diasNome = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+        const diasNome = ["Domingo","Segunda","TerÃ§a","Quarta","Quinta","Sexta","SÃ¡bado"];
         const byWd = [0,1,2,3,4,5,6].map(wd => ({ name: diasNome[wd], count: 0 }));
         state.history.forEach(h => {
             if (!h.date) return;
@@ -4538,7 +2149,7 @@ function renderPublicAnalytics() {
         if (elDayCount) elDayCount.innerText = busiest.count + ' atividades';
     }
 
-    // ---- Ocupação por quadra ----
+    // ---- OcupaÃ§Ã£o por quadra ----
     const courtContainer = document.getElementById('pub-court-occ');
     if (courtContainer) {
         courtContainer.innerHTML = '';
@@ -4558,7 +2169,7 @@ function renderPublicAnalytics() {
                         <div class="${color} h-full transition-all duration-700 rounded-full" style="width:${Math.min(avgRate,100)}%"></div>
                     </div>
                     <div class="flex gap-4 text-[10px] text-gray-500">
-                        <span>Manhã: ${court.periods.morning.occupancyRate.toFixed(0)}%</span>
+                        <span>ManhÃ£: ${court.periods.morning.occupancyRate.toFixed(0)}%</span>
                         <span>Tarde: ${court.periods.afternoon.occupancyRate.toFixed(0)}%</span>
                         <span>Noite: ${court.periods.evening.occupancyRate.toFixed(0)}%</span>
                     </div>
@@ -4566,16 +2177,16 @@ function renderPublicAnalytics() {
             `;
         });
         if (analytics.courts.length === 0) {
-            courtContainer.innerHTML = '<p class="text-center text-gray-500 py-6 text-sm">Nenhum dado disponível ainda.</p>';
+            courtContainer.innerHTML = '<p class="text-center text-gray-500 py-6 text-sm">Nenhum dado disponÃ­vel ainda.</p>';
         }
     }
 
-    // ---- Período (Manhã/Tarde/Noite) ----
+    // ---- PerÃ­odo (ManhÃ£/Tarde/Noite) ----
     const periodContainer = document.getElementById('pub-period-bars');
     if (periodContainer) {
         const daysInRange = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
         const periods = [
-            { name: 'Manhã', key: 'morning', icon: 'fa-sun', color: 'text-amber-400', bg: 'bg-amber-500' },
+            { name: 'ManhÃ£', key: 'morning', icon: 'fa-sun', color: 'text-amber-400', bg: 'bg-amber-500' },
             { name: 'Tarde', key: 'afternoon', icon: 'fa-cloud-sun', color: 'text-orange-400', bg: 'bg-orange-500' },
             { name: 'Noite', key: 'evening', icon: 'fa-moon', color: 'text-indigo-400', bg: 'bg-indigo-500' }
         ];
@@ -4583,12 +2194,12 @@ function renderPublicAnalytics() {
         periods.forEach(p => {
             const totalMins = PERIODS[p.key].totalMinutes * daysInRange * analytics.courts.length;
             const occupied = analytics.courts.reduce((sum, c) => sum + c.periods[p.key].occupiedMinutes, 0);
-            const rate = totalMins > 0 ? Math.min((occupied / totalMins) * 100, 100) : 0;
+            const rate = totalMins > 0 ? (occupied / totalMins) * 100 : 0;
             periodContainer.innerHTML += `
                 <div class="glass-card p-5 rounded-2xl space-y-3 text-center">
                     <i class="fas ${p.icon} ${p.color} text-2xl"></i>
                     <p class="font-bold text-white text-sm">${p.name}</p>
-                    <p class="text-[10px] text-gray-500 font-bold">${PERIODS[p.key].name === 'Manhã' ? '06:30-12:30' : PERIODS[p.key].name === 'Tarde' ? '12:31-18:30' : '18:31-22:00'}</p>
+                    <p class="text-[10px] text-gray-500 font-bold">${PERIODS[p.key].name === 'ManhÃ£' ? '06:30-12:30' : PERIODS[p.key].name === 'Tarde' ? '12:31-18:30' : '18:31-22:00'}</p>
                     <div class="h-2 bg-white/5 rounded-full overflow-hidden">
                         <div class="${p.bg} h-full rounded-full" style="width:${Math.min(rate,100)}%"></div>
                     </div>
@@ -4608,7 +2219,7 @@ function renderPublicAnalytics() {
     if (actBar && actBreakdown) {
         if (sortedActivities.length === 0) {
             actBar.innerHTML = '<div class="w-full h-full bg-white/10 rounded-full"></div>';
-            actBreakdown.innerHTML = '<p class="text-center text-gray-500 text-sm py-4">Nenhum dado disponível.</p>';
+            actBreakdown.innerHTML = '<p class="text-center text-gray-500 text-sm py-4">Nenhum dado disponÃ­vel.</p>';
         } else {
             actBar.innerHTML = sortedActivities.map(([act, data], i) => {
                 const pct = totalMins > 0 ? (data.totalMinutes / totalMins) * 100 : 0;
@@ -4645,7 +2256,7 @@ function renderPublicAnalytics() {
     if (wdChart) {
         if (currentAnalyticsPeriod === 'day') {
             if (wdTitle) wdTitle.innerText = 'Atividade por Hora';
-            if (wdSubtitle) wdSubtitle.innerText = 'Distribuição de jogos ao longo do dia';
+            if (wdSubtitle) wdSubtitle.innerText = 'DistribuiÃ§Ã£o de jogos ao longo do dia';
             
             const hourlyCounts = Array(24).fill(0);
             state.history.forEach(h => {
@@ -4660,7 +2271,7 @@ function renderPublicAnalytics() {
             
             const maxCount = Math.max(...hourlyCounts, 1);
             wdChart.innerHTML = hourlyCounts.map((count, hour) => {
-                if (hour < 6 || hour > 22) return ''; // Só mostra horário de funcionamento
+                if (hour < 6 || hour > 22) return ''; // SÃ³ mostra horÃ¡rio de funcionamento
                 const heightPct = (count / maxCount) * 100;
                 const col = '#6366f1';
                 return `
@@ -4677,14 +2288,14 @@ function renderPublicAnalytics() {
             if (wdTip) {
                 const peakHour = hourlyCounts.indexOf(Math.max(...hourlyCounts));
                 wdTip.innerText = Math.max(...hourlyCounts) > 0
-                    ? `📅 O horário de pico foi às ${peakHour}:00 com ${Math.max(...hourlyCounts)} atividades.`
-                    : '📅 Nenhuma atividade registrada no período.';
+                    ? `ðŸ“… O horÃ¡rio de pico foi Ã s ${peakHour}:00 com ${Math.max(...hourlyCounts)} atividades.`
+                    : 'ðŸ“… Nenhuma atividade registrada no perÃ­odo.';
             }
         } else {
             if (wdTitle) wdTitle.innerText = 'Atividade por Dia da Semana';
             if (wdSubtitle) wdSubtitle.innerText = 'Qual dia tem mais jogos';
             
-            const diasNome = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+            const diasNome = ["Domingo","Segunda","TerÃ§a","Quarta","Quinta","Sexta","SÃ¡bado"];
             const byWd = [0,1,2,3,4,5,6].map(wd => ({ name: diasNome[wd], count: 0 }));
             state.history.forEach(h => {
                 if (!h.date) return;
@@ -4694,7 +2305,7 @@ function renderPublicAnalytics() {
             const busiest = byWd.reduce((a, b) => b.count > a.count ? b : a, byWd[0]);
 
             const maxCount = Math.max(...byWd.map(d => d.count), 1);
-            const daysShort = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+            const daysShort = ["Dom","Seg","Ter","Qua","Qui","Sex","SÃ¡b"];
             const dayColors = ['#6366f1','#10b981','#10b981','#10b981','#10b981','#f59e0b','#6366f1'];
             wdChart.innerHTML = byWd.map((wd, i) => {
                 const heightPct = (wd.count / maxCount) * 100;
@@ -4711,14 +2322,14 @@ function renderPublicAnalytics() {
             }).join('');
             if (wdTip) {
                 wdTip.innerText = busiest.count > 0
-                    ? `📅 ${busiest.name} é o dia mais ativo do clube com ${busiest.count} atividades no período.`
-                    : '📅 Nenhuma atividade registrada no período.';
+                    ? `ðŸ“… ${busiest.name} Ã© o dia mais ativo do clube com ${busiest.count} atividades no perÃ­odo.`
+                    : 'ðŸ“… Nenhuma atividade registrada no perÃ­odo.';
             }
         }
     }
 }
 
-// renderAdmin e releaseCourt foram movidos para as seções de tarefas abaixo para evitar duplicatas.
+// renderAdmin e releaseCourt foram movidos para as seÃ§Ãµes de tarefas abaixo para evitar duplicatas.
 
 function initSortable() {
     let scrollDirection = 0, rafId = null;
@@ -4821,16 +2432,16 @@ function renderActivity() {
             </div>
             <div class="flex-1">
                 <p class="text-sm font-bold text-white">${r.players[0]}${r.players.length > 1 ? ' + ' + (r.players.length - 1) : ''}</p>
-                <p class="text-[10px] text-gray-500 uppercase font-black">${r.court} • ${r.startTime} - ${r.endTime}</p>
+                <p class="text-[10px] text-gray-500 uppercase font-black">${r.court} â€¢ ${r.startTime} - ${r.endTime}</p>
             </div>
             <div class="text-right">
                 <p class="text-[9px] font-black text-gray-600 uppercase tracking-tighter">${r.date}</p>
             </div>
         </div>
-    `).join('') || '<p class="text-center text-gray-600 font-bold py-10">Nenhum histórico disponível.</p>';
+    `).join('') || '<p class="text-center text-gray-600 font-bold py-10">Nenhum histÃ³rico disponÃ­vel.</p>';
 }
 
-// releaseCourt original removido para usar a versão aprimorada abaixo.
+// releaseCourt original removido para usar a versÃ£o aprimorada abaixo.
 
 function startMatch(court) {
     const booking = state.bookings.find(b => b.court === court);
@@ -4876,17 +2487,33 @@ function showToast(msg, type='info') {
 }
 
 // ============================================================
-// HORÁRIO VIA INTERNET (timeapi.io — fuso America/Sao_Paulo)
+// HORÃRIO VIA INTERNET (timeapi.io â€” fuso America/Sao_Paulo)
 // ============================================================
-let _timeOffset = 0; // diferença em ms entre servidor e Date.now()
+let _timeOffset = 0; // diferenÃ§a em ms entre servidor e Date.now()
 let _timeSynced = false;
 const _clockEl = () => document.getElementById('public-clock');
 const _syncIndicatorEl = () => document.getElementById('clock-sync-indicator');
 
+async function fetchWithTimeout(url, options = {}) {
+    const timeout = options.timeout ?? 5000;
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(url, { ...options, signal });
+        return response;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 async function syncInternetTime() {
     try {
         // Tenta timeapi.io primeiro (sem CORS issues)
-        const res = await fetch('https://timeapi.io/api/time/current/zone?timeZone=America%2FSao_Paulo', { cache: 'no-store' });
+        const res = await fetchWithTimeout('https://timeapi.io/api/time/current/zone?timeZone=America%2FSao_Paulo', {
+            cache: 'no-store',
+            timeout: 5000,
+        });
         if (!res.ok) throw new Error('timeapi falhou');
         const data = await res.json();
         // data.dateTime ex: "2025-06-02T14:35:22.123"
@@ -4894,30 +2521,33 @@ async function syncInternetTime() {
         _timeOffset = serverMs - Date.now();
         _timeSynced = true;
         if (_syncIndicatorEl()) {
-            _syncIndicatorEl().title = 'Horário sincronizado com a internet';
+            _syncIndicatorEl().title = 'HorÃ¡rio sincronizado com a internet';
             _syncIndicatorEl().classList.replace('text-gray-500','text-emerald-400');
         }
         console.log(`[Clock] Sincronizado: offset=${_timeOffset}ms`);
     } catch(e) {
         // Fallback: worldtimeapi
         try {
-            const res2 = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo', { cache: 'no-store' });
+            const res2 = await fetchWithTimeout('https://worldtimeapi.org/api/timezone/America/Sao_Paulo', {
+                cache: 'no-store',
+                timeout: 5000,
+            });
             if (!res2.ok) throw new Error('worldtimeapi falhou');
             const data2 = await res2.json();
             const serverMs2 = new Date(data2.datetime).getTime();
             _timeOffset = serverMs2 - Date.now();
             _timeSynced = true;
             if (_syncIndicatorEl()) {
-                _syncIndicatorEl().title = 'Horário sincronizado (fallback)';
+                _syncIndicatorEl().title = 'HorÃ¡rio sincronizado (fallback)';
                 _syncIndicatorEl().classList.replace('text-gray-500','text-emerald-400');
             }
         } catch(e2) {
             _timeSynced = false;
             if (_syncIndicatorEl()) {
-                _syncIndicatorEl().title = 'Sem sincronização — usando relógio local';
+                _syncIndicatorEl().title = 'Sem sincronizaÃ§Ã£o â€” usando relÃ³gio local';
                 _syncIndicatorEl().classList.replace('text-emerald-400','text-gray-500');
             }
-            console.warn('[Clock] Falha ao sincronizar horário pela internet. Usando relógio local.');
+            console.warn('[Clock] Falha ao sincronizar horÃ¡rio pela internet. Usando relÃ³gio local.');
         }
     }
 }
@@ -4941,7 +2571,7 @@ setInterval(() => {
     if(state.settings.theme === 'auto') applyTheme();
 }, 1000);
 
-// Executar verificações pesadas com menos frequência (a cada 30 segundos)
+// Executar verificaÃ§Ãµes pesadas com menos frequÃªncia (a cada 30 segundos)
 setInterval(() => {
     applyFixedSchedules();
     closeAllActivities();
@@ -4949,12 +2579,12 @@ setInterval(() => {
 }, 30000);
 
 applyFixedSchedules();
-// Recuperar sessão do usuário
+// Recuperar sessÃ£o do usuÃ¡rio
 const savedUser = storage.get('rq_pro_user');
 if (savedUser && USER_ROLES[savedUser]) {
     loginAs(savedUser);
 } else {
-    // Sem sessão: garante que tela de login está visível e todas as views ocultas
+    // Sem sessÃ£o: garante que tela de login estÃ¡ visÃ­vel e todas as views ocultas
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
     const loginScreen = document.getElementById('login-screen');
     if (loginScreen) {
@@ -5130,23 +2760,23 @@ function initTennis3D() {
     animate();
 }
 
-try { console.log("ReservaQuadras Pro Iniciado."); initTennis3D(); } catch (e) { console.error("Erro na inicialização:", e); }
+try { console.log("ReservaQuadras Pro Iniciado."); initTennis3D(); } catch (e) { console.error("Erro na inicializaÃ§Ã£o:", e); }
 
 // ============================================================
-// TAREFA F — Reversão de atividade encerrada
+// TAREFA F â€” ReversÃ£o de atividade encerrada
 // ============================================================
 
 /** @param {string} historyId - ID da entrada em state.history a reverter */
 function revertHistoryEntry(historyId) {
     const idx = state.history.findIndex(h => String(h.id) === String(historyId));
-    if (idx === -1) return showToast("Entrada não encontrada!", "error");
+    if (idx === -1) return showToast("Entrada nÃ£o encontrada!", "error");
 
     const entry = state.history[idx];
     const targetCourt = entry.court;
     const courtOccupied = state.bookings.some(b => b.court === targetCourt);
 
     if (courtOccupied) {
-        if (!confirm(`A ${targetCourt} está ocupada. Deseja mover para a fila de espera?`)) return;
+        if (!confirm(`A ${targetCourt} estÃ¡ ocupada. Deseja mover para a fila de espera?`)) return;
         state.history.splice(idx, 1);
         const { date, weekday, endTime, playDuration, waitDuration, activity, encerradoPor, ...waitEntry } = entry;
         waitEntry.registrationTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -5172,8 +2802,8 @@ function revertHistoryEntry(historyId) {
     render();
 }
 
-/** Abre o modal de reversão listando atividades encerradas hoje (máx 15, mais recentes primeiro) 
- * @param {string} courtName - Opcional: filtrar por quadra específica
+/** Abre o modal de reversÃ£o listando atividades encerradas hoje (mÃ¡x 15, mais recentes primeiro) 
+ * @param {string} courtName - Opcional: filtrar por quadra especÃ­fica
  */
 function openUndoModal(courtName = null) {
     const todayDate = getTodayDate();
@@ -5194,13 +2824,13 @@ function openUndoModal(courtName = null) {
         list.innerHTML = todayHistory.map(h => {
             const diffMs = new Date() - new Date(`${h.date.split('/').reverse().join('-')}T${h.endTime}`);
             const diffHours = diffMs / (1000 * 60 * 60);
-            const warning = diffHours > 3 ? '<span class="text-[8px] text-red-400 font-black ml-2">⚠ Encerrado há >3h</span>' : '';
+            const warning = diffHours > 3 ? '<span class="text-[8px] text-red-400 font-black ml-2">âš  Encerrado hÃ¡ >3h</span>' : '';
             
             return `
                 <div class="glass-card p-4 rounded-2xl border border-white/10 flex justify-between items-center gap-4">
                     <div class="flex-1 min-w-0">
                         <p class="text-xs font-black text-white truncate">${(h.players || []).join(', ')} ${warning}</p>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">${h.court} · ${h.activity || 'JOGO'} · ${h.startTime || '--:--'} → ${h.endTime || '--:--'}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">${h.court} Â· ${h.activity || 'JOGO'} Â· ${h.startTime || '--:--'} â†’ ${h.endTime || '--:--'}</p>
                     </div>
                     <button onclick="revertHistoryEntry('${h.id}')" class="shrink-0 px-4 py-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black text-[9px] uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all">
                         <i class="fas fa-rotate-left mr-1"></i>Reverter
@@ -5213,43 +2843,43 @@ function openUndoModal(courtName = null) {
     showModal('undo-modal');
 }
 
-/** Fecha o modal de reversão */
+/** Fecha o modal de reversÃ£o */
 function closeUndoModal() {
     hideModal('undo-modal');
 }
 
 // ============================================================
-// TAREFA G — Analytics e Exportações aprimoradas
+// TAREFA G â€” Analytics e ExportaÃ§Ãµes aprimoradas
 // ============================================================
 
 /**
- * Retorna o nome do período (Manhã/Tarde/Noite/--) de acordo com um horário HH:MM
- * @param {string} timeStr - Horário no formato HH:MM
+ * Retorna o nome do perÃ­odo (ManhÃ£/Tarde/Noite/--) de acordo com um horÃ¡rio HH:MM
+ * @param {string} timeStr - HorÃ¡rio no formato HH:MM
  * @returns {string}
  */
 function getPeriodoStr(timeStr) {
     if (!timeStr) return '--';
     const mins = timeToMinutes(timeStr);
-    if (mins >= PERIODS.morning.startHour * 60 + PERIODS.morning.startMinute && mins <= PERIODS.morning.endHour * 60 + PERIODS.morning.endMinute) return 'Manhã';
+    if (mins >= PERIODS.morning.startHour * 60 + PERIODS.morning.startMinute && mins <= PERIODS.morning.endHour * 60 + PERIODS.morning.endMinute) return 'ManhÃ£';
     if (mins >= PERIODS.afternoon.startHour * 60 + PERIODS.afternoon.startMinute && mins <= PERIODS.afternoon.endHour * 60 + PERIODS.afternoon.endMinute) return 'Tarde';
     if (mins >= PERIODS.evening.startHour * 60 + PERIODS.evening.startMinute && mins <= PERIODS.evening.endHour * 60 + PERIODS.evening.endMinute) return 'Noite';
     return '--';
 }
 
-/** G.3: Novos KPIs no Dashboard Home (versão única) */
+/** G.3: Novos KPIs no Dashboard Home (versÃ£o Ãºnica) */
 
-/** G.1: releaseCourt aprimorado — encerradoPor e applyFixedSchedules já integrados na versão final abaixo */
+/** G.1: releaseCourt aprimorado â€” encerradoPor e applyFixedSchedules jÃ¡ integrados na versÃ£o final abaixo */
 
 /** G.2: exportDashboardData com novas colunas */
 function exportDashboardData() {
     if (state.history.length === 0) return showToast("Nenhum dado para exportar!", "warning");
     const sep = ";";
     const headers = [
-        "ID", "Data do Jogo", "Dia da Semana", "Quadra", "Jogadores", "Títulos",
-        "Atividade", "Data da Inscrição", "Hora da Inscrição", "Hora de Início", "Hora de Fim",
-        "Tempo de Espera (min)", "Tempo de Jogo (min)", "Observação", "Repetido",
+        "ID", "Data do Jogo", "Dia da Semana", "Quadra", "Jogadores", "TÃ­tulos",
+        "Atividade", "Data da InscriÃ§Ã£o", "Hora da InscriÃ§Ã£o", "Hora de InÃ­cio", "Hora de Fim",
+        "Tempo de Espera (min)", "Tempo de Jogo (min)", "ObservaÃ§Ã£o", "Repetido",
         // Novas colunas G.2
-        "Encerrado Por", "Período do Dia", "Total de Jogadores", "Tempo na Quadra (hh:mm)"
+        "Encerrado Por", "PerÃ­odo do Dia", "Total de Jogadores", "Tempo na Quadra (hh:mm)"
     ];
     const rows = state.history.map(h => {
         const totalMins = h.playDuration || 0;
@@ -5261,7 +2891,7 @@ function exportDashboardData() {
             h.activity || "", h.registrationDate || "", h.registrationTime || "",
             h.startTime || "--", h.endTime || "--",
             h.waitDuration || 0, h.playDuration || 0,
-            h.observation || "", h.repeat ? "Sim" : "Não",
+            h.observation || "", h.repeat ? "Sim" : "NÃ£o",
             h.encerradoPor || "admin",
             getPeriodoStr(h.startTime),
             (h.players || []).length,
@@ -5275,15 +2905,15 @@ function exportDashboardData() {
     link.setAttribute("href", url);
     link.setAttribute("download", `historico_completo_quadras_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    showToast("Histórico completo exportado com sucesso!", "success");
+    showToast("HistÃ³rico completo exportado com sucesso!", "success");
 }
 
 /** G.5: exportWithdrawals com novas colunas */
 function exportWithdrawals() {
-    if (state.withdrawals.length === 0) return showToast("Nenhuma desistência para exportar!", "warning");
+    if (state.withdrawals.length === 0) return showToast("Nenhuma desistÃªncia para exportar!", "warning");
     const sep = ";";
-    const headers = ["Data Inscrição", "Hora Inscrição", "Data Desistência", "Hora Desistência", "Jogadores", "Atividade", "Observação",
-        "Tempo na Fila (min)", "Número de Jogadores"]; // Novas colunas G.5
+    const headers = ["Data InscriÃ§Ã£o", "Hora InscriÃ§Ã£o", "Data DesistÃªncia", "Hora DesistÃªncia", "Jogadores", "Atividade", "ObservaÃ§Ã£o",
+        "Tempo na Fila (min)", "NÃºmero de Jogadores"]; // Novas colunas G.5
     const rows = state.withdrawals.map(w => {
         let tempoFila = 0;
         if (w.registrationTime && w.withdrawnAt) {
@@ -5307,19 +2937,19 @@ function exportWithdrawals() {
     link.setAttribute("href", url);
     link.setAttribute("download", `desistencias_fila_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    showToast("Relatório de desistências exportado!", "success");
+    showToast("RelatÃ³rio de desistÃªncias exportado!", "success");
 }
 
-/** G.3: Atualiza KPIs de período, quadra ociosa e pico de espera no dashboard */
+/** G.3: Atualiza KPIs de perÃ­odo, quadra ociosa e pico de espera no dashboard */
 function updateDashboardExtra() {
     const todayDate = getTodayDate();
     const todayHistory = state.history.filter(h => h.date === todayDate);
 
-    // Média por período
+    // MÃ©dia por perÃ­odo
     const periods = { morning: [], afternoon: [], evening: [] };
     todayHistory.forEach(h => {
         const p = getPeriodoStr(h.startTime);
-        if (p === 'Manhã') periods.morning.push(h.playDuration || 0);
+        if (p === 'ManhÃ£') periods.morning.push(h.playDuration || 0);
         else if (p === 'Tarde') periods.afternoon.push(h.playDuration || 0);
         else if (p === 'Noite') periods.evening.push(h.playDuration || 0);
     });
@@ -5356,16 +2986,16 @@ function updateDashboardExtra() {
 }
 
 // ============================================================
-// TAREFA H — FIXED_SCHEDULES melhorias
+// TAREFA H â€” FIXED_SCHEDULES melhorias
 // ============================================================
 
-// H.2: Fins de semana já incluídos na constante FIXED_SCHEDULES.
+// H.2: Fins de semana jÃ¡ incluÃ­dos na constante FIXED_SCHEDULES.
 
-// H.3: Variável para quadra sendo liberada via modal
+// H.3: VariÃ¡vel para quadra sendo liberada via modal
 let _releaseLessonCourtPending = null;
 
 /**
- * Abre o modal granular de liberação de aula (H.3) 
+ * Abre o modal granular de liberaÃ§Ã£o de aula (H.3) 
  * @param {string} court - Nome da quadra
  */
 function openReleaseLessonModal(court) {
@@ -5382,19 +3012,19 @@ function closeReleaseLessonModal() {
     _releaseLessonCourtPending = null;
 }
 
-/** Libera até o fim do período atual (comportamento padrão antigo) */
+/** Libera atÃ© o fim do perÃ­odo atual (comportamento padrÃ£o antigo) */
 function releaseLessonUntilPeriodEnd() {
     if (!_releaseLessonCourtPending) return;
     _doReleaseCourt(_releaseLessonCourtPending, null);
     closeReleaseLessonModal();
 }
 
-/** Libera até o horário digitado pelo admin */
+/** Libera atÃ© o horÃ¡rio digitado pelo admin */
 function releaseLessonUntilTime() {
     if (!_releaseLessonCourtPending) return;
     const timeInput = document.getElementById('release-lesson-until');
     const until = timeInput ? timeInput.value : null;
-    if (!until) return showToast("Informe um horário válido!", "warning");
+    if (!until) return showToast("Informe um horÃ¡rio vÃ¡lido!", "warning");
     _doReleaseCourt(_releaseLessonCourtPending, until);
     closeReleaseLessonModal();
 }
@@ -5402,7 +3032,7 @@ function releaseLessonUntilTime() {
 /**
  * Executa o encerramento da reserva e marca manuallyReleasedLessons com suporte a `until`
  * @param {string} court - Nome da quadra
- * @param {string|null} until - HH:MM ou null para fim de período
+ * @param {string|null} until - HH:MM ou null para fim de perÃ­odo
  */
 function _doReleaseCourt(court, until) {
     const booking = state.bookings.find(b => b.court === court);
@@ -5450,17 +3080,17 @@ function _doReleaseCourt(court, until) {
         state.manuallyReleasedLessons.push(entry);
     }
 
-    // H.1: re-aplicar agendas imediatamente após liberar
+    // H.1: re-aplicar agendas imediatamente apÃ³s liberar
     save();
     applyFixedSchedules();
     render();
     showToast(`Quadra ${court} liberada!`, "success");
 
-    // Tarefa A: Promoção automática da fila
+    // Tarefa A: PromoÃ§Ã£o automÃ¡tica da fila
     if (state.waitlist.length > 0) {
         const nextGroup = state.waitlist[0];
         showToastWithAction(
-            `${nextGroup.players[0]} está na fila. Mover para ${court}?`,
+            `${nextGroup.players[0]} estÃ¡ na fila. Mover para ${court}?`,
             "Mover",
             () => {
                 const idx = state.waitlist.findIndex(w => w.id === nextGroup.id);
@@ -5484,9 +3114,9 @@ function _doReleaseCourt(court, until) {
 }
 
 /**
- * Exibe um toast com botão de ação inline (sem modal bloqueante)
+ * Exibe um toast com botÃ£o de aÃ§Ã£o inline (sem modal bloqueante)
  * @param {string} msg - Mensagem
- * @param {string} actionLabel - Rótulo do botão
+ * @param {string} actionLabel - RÃ³tulo do botÃ£o
  * @param {Function} onAction - Callback ao clicar
  */
 function showToastWithAction(msg, actionLabel, onAction) {
@@ -5508,20 +3138,20 @@ function showToastWithAction(msg, actionLabel, onAction) {
     setTimeout(() => div.remove(), 12000);
 }
 
-// Substituir releaseCourt pelo novo fluxo com modal de opção para aulas
+// Substituir releaseCourt pelo novo fluxo com modal de opÃ§Ã£o para aulas
 function releaseCourt(court) {
     const booking = state.bookings.find(b => b.court === court);
     if (!booking) return;
-    // H.3: Se for aula automática, perguntar sobre horário de retorno via modal
+    // H.3: Se for aula automÃ¡tica, perguntar sobre horÃ¡rio de retorno via modal
     if (booking.type === 'lesson' && booking.observation === 'Agenda Fixa') {
         openReleaseLessonModal(court);
     } else {
-        // Para não-aulas ou aulas manuais, liberar direto sem modal extra
+        // Para nÃ£o-aulas ou aulas manuais, liberar direto sem modal extra
         _doReleaseCourt(court, null);
     }
 }
 
-// H.1: Versão melhorada de applyFixedSchedules com suporte a `until` e badge de aula ignorada
+// H.1: VersÃ£o melhorada de applyFixedSchedules com suporte a `until` e badge de aula ignorada
 function applyFixedSchedules() {
     const todayDate = getTodayDate();
     const weekdayName = getWeekdayName();
@@ -5546,9 +3176,9 @@ function applyFixedSchedules() {
         if (existingBooking && ['blocked', 'rain', 'tournament'].includes(existingBooking.type)) {
             // H.1: Badge de aula ignorada
             if (fixedStatus === 'lesson') {
-                const logMsg = `Aula ignorada em "${courtName}" — quadra com status manual: ${existingBooking.type}`;
+                const logMsg = `Aula ignorada em "${courtName}" â€” quadra com status manual: ${existingBooking.type}`;
                 if (!window._lastLogTime || Date.now() - window._lastLogTime > 300000) { // 5 min throttle
-                    console.warn(`[${new Date().toLocaleTimeString('pt-BR')}] ⚠ ${logMsg}`);
+                    console.warn(`[${new Date().toLocaleTimeString('pt-BR')}] âš  ${logMsg}`);
                     showToast(`Aula ignorada na ${courtName} (bloqueio manual)`, "warning");
                     window._lastLogTime = Date.now();
                 }
@@ -5556,22 +3186,22 @@ function applyFixedSchedules() {
             continue;
         }
 
-        // H.3: Verificar se liberada até horário específico
+        // H.3: Verificar se liberada atÃ© horÃ¡rio especÃ­fico
         const manualRelease = state.manuallyReleasedLessons.find(m => m.court === courtName && m.date === todayDate);
         if (manualRelease) {
-            // Se tem `until`, verificar se já passou o horário
+            // Se tem `until`, verificar se jÃ¡ passou o horÃ¡rio
             if (manualRelease.until) {
                 const untilMins = timeToMinutes(manualRelease.until);
                 if (currentMinutes < untilMins) {
-                    continue; // Ainda dentro da liberação manual com horário
+                    continue; // Ainda dentro da liberaÃ§Ã£o manual com horÃ¡rio
                 } else {
-                    // Horário atingido — remover entrada para a agenda voltar a controlar
+                    // HorÃ¡rio atingido â€” remover entrada para a agenda voltar a controlar
                     state.manuallyReleasedLessons = state.manuallyReleasedLessons.filter(
                         m => !(m.court === courtName && m.date === todayDate)
                     );
                 }
             } else {
-                continue; // Liberar até fim do período (comportamento original)
+                continue; // Liberar atÃ© fim do perÃ­odo (comportamento original)
             }
         }
 
@@ -5618,9 +3248,9 @@ function applyFixedSchedules() {
     saveLocal();
 }
 
-// H.4: Calcular próxima transição de quadra
+// H.4: Calcular prÃ³xima transiÃ§Ã£o de quadra
 /**
- * Calcula a próxima transição de status para a quadra
+ * Calcula a prÃ³xima transiÃ§Ã£o de status para a quadra
  * @param {string} courtName
  * @returns {{ label: string, color: string } | null}
  */
@@ -5634,25 +3264,25 @@ function getNextTransition(courtName) {
     const daySchedules = schedules.filter(s => s.days.includes(dayOfWeek));
     if (daySchedules.length === 0) return null;
 
-    // Encontrar o período atual
+    // Encontrar o perÃ­odo atual
     for (const s of daySchedules) {
         const startMins = timeToMinutes(s.start);
         const endMins = timeToMinutes(s.end);
         if (currentMinutes >= startMins && currentMinutes < endMins) {
-            // Está neste período — próxima transição é ao final deste
+            // EstÃ¡ neste perÃ­odo â€” prÃ³xima transiÃ§Ã£o Ã© ao final deste
             if (s.status === 'lesson') {
-                return { label: `Livre às ${s.end}`, color: 'text-emerald-400' };
+                return { label: `Livre Ã s ${s.end}`, color: 'text-emerald-400' };
             } else {
-                // Encontrar o próximo período de aula
+                // Encontrar o prÃ³ximo perÃ­odo de aula
                 const nextLesson = daySchedules.find(nx => nx.status === 'lesson' && timeToMinutes(nx.start) >= endMins);
-                if (nextLesson) return { label: `Aula às ${nextLesson.start}`, color: 'text-amber-400' };
+                if (nextLesson) return { label: `Aula Ã s ${nextLesson.start}`, color: 'text-amber-400' };
             }
         }
     }
     return null;
 }
 
-// H.1 + H.4: renderAdmin com badge de aula ignorada e indicador de próxima transição
+// H.1 + H.4: renderAdmin com badge de aula ignorada e indicador de prÃ³xima transiÃ§Ã£o
 function renderAdmin() {
     const grid = document.getElementById('admin-grid');
     if (!grid) return;
@@ -5669,10 +3299,10 @@ function renderAdmin() {
         // H.1: Badge de aula ignorada
         const fixedStatus = getFixedStatus(c);
         const ignoredBadge = (b && ['blocked','rain','tournament'].includes(b.type) && fixedStatus === 'lesson')
-            ? `<p class="text-[9px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2 py-1 mt-2">⚠ Aula ignorada — quadra bloqueada</p>`
+            ? `<p class="text-[9px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2 py-1 mt-2">âš  Aula ignorada â€” quadra bloqueada</p>`
             : '';
 
-        // H.4: Próxima transição
+        // H.4: PrÃ³xima transiÃ§Ã£o
         const nextTrans = getNextTransition(c);
         const transitionBadge = nextTrans
             ? `<p class="text-[9px] font-bold ${nextTrans.color} mt-2">${nextTrans.label}</p>`
@@ -5696,7 +3326,7 @@ function renderAdmin() {
                             ${b.players.map(p => `<div class="truncate">${p}</div>`).join('')}
                         </div>
                         <div class="text-[9px] text-gray-400 mb-2.5">
-                            Insc: ${b.registrationTime || '--:--'} | Início: ${b.startTime || '--:--'}
+                            Insc: ${b.registrationTime || '--:--'} | InÃ­cio: ${b.startTime || '--:--'}
                         </div>
                         ${b.observation ? `<p class="text-[9px] font-bold text-indigo-300 mt-1 border-l-2 border-indigo-400 pl-2 py-0.5 italic">"${b.observation}"</p>` : ''}
                         ${ignoredBadge}
@@ -5716,7 +3346,7 @@ function renderAdmin() {
                             </button>
                         ` : ''}
                     ` : `
-                        <p class="text-gray-400 italic text-[10px] mb-2.5">Disponível para uso</p>
+                        <p class="text-gray-400 italic text-[10px] mb-2.5">DisponÃ­vel para uso</p>
                         ${transitionBadge}
                         <div class="h-8 border border-dashed border-white/20 rounded-xl flex items-center justify-center text-[9px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/5">QUADRA LIVRE</div>
                         <button onclick="openUndoModal('${c}')" class="w-full mt-3 py-1.5 rounded-xl bg-amber-500/5 text-amber-400/60 border border-amber-500/10 font-black text-[9px] uppercase tracking-widest hover:bg-amber-500/20 hover:text-amber-400 transition-all flex items-center justify-center gap-2">
@@ -5731,51 +3361,51 @@ function renderAdmin() {
     // Manter waitlist render (reaproveitado do original)
     const adminWait = document.getElementById('admin-waitlist');
     if (!adminWait) return;
-    adminWait.innerHTML = state.waitlist.map((item, i) => `<div class="glass-card p-5 rounded-[1.5rem] border-white/20 bg-white/5 backdrop-blur-[4px] cursor-move hover:border-indigo-500/50 transition-all waitlist-item flex flex-col justify-between min-h-[120px]" data-id="${item.id}"><div class="flex justify-between items-start mb-3"><div class="flex flex-col gap-1"><span class="px-3 py-1.5 bg-indigo-500/80 text-white text-[9px] font-black rounded-xl uppercase tracking-widest">FILA: GRUPO ${i+1}</span><span class="text-[9px] font-bold text-gray-300">${item.registrationTime}</span></div><div class="flex gap-2"><button onclick="openWaitlistEditModal('${item.id}')" class="w-8 h-8 flex items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-white transition-all border border-amber-500/20" title="Editar Grupo"><i class="fas fa-pen text-xs"></i></button><button onclick="openMoveModal('${item.id}')" class="w-8 h-8 flex items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all border border-indigo-500/20" title="Mover para Quadra"><i class="fas fa-right-left text-xs"></i></button><button onclick="removeFromWaitlist('${item.id}')" class="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-indigo-500/20" title="Remover da Fila"><i class="fas fa-trash-can text-xs"></i></button></div></div><div class="flex-1 flex flex-col justify-center my-1.5 overflow-hidden"><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Jogadores</p><div class="text-xs font-black text-white leading-tight space-y-0.5">${item.players.map(p => `<div class="truncate border-b border-white/10 pb-0.5 last:border-0">${p}</div>`).join('')}</div></div><div class="mt-auto pt-2 border-t border-white/10 flex justify-between items-center"><p class="text-[9px] font-black text-indigo-300 uppercase tracking-widest">${item.activity}</p>${item.repeat ? '<span class="px-2 py-0.5 bg-red-500/30 text-red-200 text-[7px] font-black rounded-lg uppercase tracking-tighter border border-red-500/40">SEM PREFERÊNCIA</span>' : ''}</div></div>`).join('') || '<div class="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">Nenhum grupo aguardando</div>';
+    adminWait.innerHTML = state.waitlist.map((item, i) => `<div class="glass-card p-5 rounded-[1.5rem] border-white/20 bg-white/5 backdrop-blur-[4px] cursor-move hover:border-indigo-500/50 transition-all waitlist-item flex flex-col justify-between min-h-[120px]" data-id="${item.id}"><div class="flex justify-between items-start mb-3"><div class="flex flex-col gap-1"><span class="px-3 py-1.5 bg-indigo-500/80 text-white text-[9px] font-black rounded-xl uppercase tracking-widest">FILA: GRUPO ${i+1}</span><span class="text-[9px] font-bold text-gray-300">${item.registrationTime}</span></div><div class="flex gap-2"><button onclick="openWaitlistEditModal('${item.id}')" class="w-8 h-8 flex items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-white transition-all border border-amber-500/20" title="Editar Grupo"><i class="fas fa-pen text-xs"></i></button><button onclick="openMoveModal('${item.id}')" class="w-8 h-8 flex items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all border border-indigo-500/20" title="Mover para Quadra"><i class="fas fa-right-left text-xs"></i></button><button onclick="removeFromWaitlist('${item.id}')" class="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-indigo-500/20" title="Remover da Fila"><i class="fas fa-trash-can text-xs"></i></button></div></div><div class="flex-1 flex flex-col justify-center my-1.5 overflow-hidden"><p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Jogadores</p><div class="text-xs font-black text-white leading-tight space-y-0.5">${item.players.map(p => `<div class="truncate border-b border-white/10 pb-0.5 last:border-0">${p}</div>`).join('')}</div></div><div class="mt-auto pt-2 border-t border-white/10 flex justify-between items-center"><p class="text-[9px] font-black text-indigo-300 uppercase tracking-widest">${item.activity}</p>${item.repeat ? '<span class="px-2 py-0.5 bg-red-500/30 text-red-200 text-[7px] font-black rounded-lg uppercase tracking-tighter border border-red-500/40">SEM PREFERÃŠNCIA</span>' : ''}</div></div>`).join('') || '<div class="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">Nenhum grupo aguardando</div>';
     initSortable();
 }
 
-// G.4: exportOccupancyComplete com seção "Resumo por Dia da Semana"
+// G.4: exportOccupancyComplete com seÃ§Ã£o "Resumo por Dia da Semana"
 function exportOccupancyComplete() {
     const endDate = new Date();
     const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
-    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
+    if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupaÃ§Ã£o para exportar!", "warning");
 
     const sep = ";";
     let allContent = [];
 
-    allContent.push(["RELATÓRIO COMPLETO DE OCUPAÇÃO DAS QUADRAS"]);
-    allContent.push(["Período Analisado", `${startDate.toLocaleDateString("pt-BR")} - ${endDate.toLocaleDateString("pt-BR")}`]);
-    allContent.push(["Data de Geração", new Date().toLocaleString("pt-BR")]);
+    allContent.push(["RELATÃ“RIO COMPLETO DE OCUPAÃ‡ÃƒO DAS QUADRAS"]);
+    allContent.push(["PerÃ­odo Analisado", `${startDate.toLocaleDateString("pt-BR")} - ${endDate.toLocaleDateString("pt-BR")}`]);
+    allContent.push(["Data de GeraÃ§Ã£o", new Date().toLocaleString("pt-BR")]);
     allContent.push([""]);
 
     allContent.push(["=================================================================="]);
     allContent.push(["1. RESUMO GERAL"]);
     allContent.push(["=================================================================="]);
     allContent.push([""]);
-    allContent.push(["Descrição", "Valor", "Observação"]);
+    allContent.push(["DescriÃ§Ã£o", "Valor", "ObservaÃ§Ã£o"]);
     allContent.push(["Total de Quadras", analytics.courts.length, ""]);
     allContent.push(["Total de Horas de Jogo", formatHours(analytics.overall.totalPlayMinutes), `Total: ${analytics.overall.totalPlayMinutes} minutos`]);
-    allContent.push(["Taxa Média de Ocupação", `${analytics.overall.averageOccupancyRate.toFixed(2)}%`, "Cálculo: Média das taxas dos 3 períodos"]);
+    allContent.push(["Taxa MÃ©dia de OcupaÃ§Ã£o", `${analytics.overall.averageOccupancyRate.toFixed(2)}%`, "CÃ¡lculo: MÃ©dia das taxas dos 3 perÃ­odos"]);
     allContent.push([""]);
 
     allContent.push(["=================================================================="]);
-    allContent.push(["2. RESUMO POR PERÍODO DO DIA"]);
+    allContent.push(["2. RESUMO POR PERÃODO DO DIA"]);
     allContent.push(["=================================================================="]);
     allContent.push([""]);
-    allContent.push(["Período", "Horário", "Minutos Totais Disponíveis", "Minutos Ocupados", "Taxa de Ocupação (%)", "Fórmula"]);
+    allContent.push(["PerÃ­odo", "HorÃ¡rio", "Minutos Totais DisponÃ­veis", "Minutos Ocupados", "Taxa de OcupaÃ§Ã£o (%)", "FÃ³rmula"]);
     const daysInRange = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
     const morningTotalMin = PERIODS.morning.totalMinutes * daysInRange * analytics.courts.length;
     const morningOccupiedMin = analytics.courts.reduce((sum, c) => sum + c.periods.morning.occupiedMinutes, 0);
-    const morningRate = morningTotalMin > 0 ? Math.min((morningOccupiedMin / morningTotalMin) * 100, 100) : 0;
+    const morningRate = morningTotalMin > 0 ? (morningOccupiedMin / morningTotalMin) * 100 : 0;
     const afternoonTotalMin = PERIODS.afternoon.totalMinutes * daysInRange * analytics.courts.length;
     const afternoonOccupiedMin = analytics.courts.reduce((sum, c) => sum + c.periods.afternoon.occupiedMinutes, 0);
-    const afternoonRate = afternoonTotalMin > 0 ? Math.min((afternoonOccupiedMin / afternoonTotalMin) * 100, 100) : 0;
+    const afternoonRate = afternoonTotalMin > 0 ? (afternoonOccupiedMin / afternoonTotalMin) * 100 : 0;
     const eveningTotalMin = PERIODS.evening.totalMinutes * daysInRange * analytics.courts.length;
     const eveningOccupiedMin = analytics.courts.reduce((sum, c) => sum + c.periods.evening.occupiedMinutes, 0);
-    const eveningRate = eveningTotalMin > 0 ? Math.min((eveningOccupiedMin / eveningTotalMin) * 100, 100) : 0;
-    allContent.push(["Manhã", "06:30 - 12:30", morningTotalMin, morningOccupiedMin, morningRate.toFixed(2), "Minutos Ocupados / Minutos Totais * 100"]);
+    const eveningRate = eveningTotalMin > 0 ? (eveningOccupiedMin / eveningTotalMin) * 100 : 0;
+    allContent.push(["ManhÃ£", "06:30 - 12:30", morningTotalMin, morningOccupiedMin, morningRate.toFixed(2), "Minutos Ocupados / Minutos Totais * 100"]);
     allContent.push(["Tarde", "12:31 - 18:30", afternoonTotalMin, afternoonOccupiedMin, afternoonRate.toFixed(2), "Minutos Ocupados / Minutos Totais * 100"]);
     allContent.push(["Noite", "18:31 - 22:00", eveningTotalMin, eveningOccupiedMin, eveningRate.toFixed(2), "Minutos Ocupados / Minutos Totais * 100"]);
     allContent.push([""]);
@@ -5784,7 +3414,7 @@ function exportOccupancyComplete() {
     allContent.push(["3. DADOS POR TIPO DE ATIVIDADE"]);
     allContent.push(["=================================================================="]);
     allContent.push([""]);
-    allContent.push(["Tipo de Atividade", "Total de Horas", "Total de Minutos", "Número de Sessões", "Percentual do Total (%)", "Fórmula"]);
+    allContent.push(["Tipo de Atividade", "Total de Horas", "Total de Minutos", "NÃºmero de SessÃµes", "Percentual do Total (%)", "FÃ³rmula"]);
     const totalMinutesAll = analytics.overall.totalPlayMinutes;
     Object.entries(analytics.activityData.byType)
         .sort((a, b) => b[1].totalMinutes - a[1].totalMinutes)
@@ -5798,7 +3428,7 @@ function exportOccupancyComplete() {
     allContent.push(["4. DETALHAMENTO POR QUADRA"]);
     allContent.push(["=================================================================="]);
     allContent.push([""]);
-    allContent.push(["Quadra", "Total de Minutos", "Total de Horas", "Minutos Manhã", "Minutos Tarde", "Minutos Noite", "Ocupação Manhã (%)", "Ocupação Tarde (%)", "Ocupação Noite (%)", "Taxa Média (%)"]);
+    allContent.push(["Quadra", "Total de Minutos", "Total de Horas", "Minutos ManhÃ£", "Minutos Tarde", "Minutos Noite", "OcupaÃ§Ã£o ManhÃ£ (%)", "OcupaÃ§Ã£o Tarde (%)", "OcupaÃ§Ã£o Noite (%)", "Taxa MÃ©dia (%)"]);
     analytics.courts.forEach(court => {
         const avgRate = (court.periods.morning.occupancyRate + court.periods.afternoon.occupancyRate + court.periods.evening.occupancyRate) / 3;
         allContent.push([court.courtName, court.totalPlayMinutes, formatHours(court.totalPlayMinutes), court.periods.morning.occupiedMinutes, court.periods.afternoon.occupiedMinutes, court.periods.evening.occupiedMinutes, court.periods.morning.occupancyRate.toFixed(2), court.periods.afternoon.occupancyRate.toFixed(2), court.periods.evening.occupancyRate.toFixed(2), avgRate.toFixed(2)]);
@@ -5806,10 +3436,10 @@ function exportOccupancyComplete() {
     allContent.push([""]);
 
     allContent.push(["=================================================================="]);
-    allContent.push(["5. OCUPAÇÃO DE AULAS POR QUADRA"]);
+    allContent.push(["5. OCUPAÃ‡ÃƒO DE AULAS POR QUADRA"]);
     allContent.push(["=================================================================="]);
     allContent.push([""]);
-    allContent.push(["Quadra", "Total de Minutos em Aulas", "Total de Horas em Aulas", "Minutos Manhã (Aulas)", "Minutos Tarde (Aulas)", "Minutos Noite (Aulas)", "Ocupação Manhã (%)", "Ocupação Tarde (%)", "Ocupação Noite (%)"]);
+    allContent.push(["Quadra", "Total de Minutos em Aulas", "Total de Horas em Aulas", "Minutos ManhÃ£ (Aulas)", "Minutos Tarde (Aulas)", "Minutos Noite (Aulas)", "OcupaÃ§Ã£o ManhÃ£ (%)", "OcupaÃ§Ã£o Tarde (%)", "OcupaÃ§Ã£o Noite (%)"]);
     analytics.courts.forEach(court => {
         if (court.totalLessonMinutes > 0) {
             allContent.push([court.courtName, court.totalLessonMinutes, formatHours(court.totalLessonMinutes), court.lessonPeriods.morning.occupiedMinutes, court.lessonPeriods.afternoon.occupiedMinutes, court.lessonPeriods.evening.occupiedMinutes, court.lessonPeriods.morning.occupancyRate.toFixed(2), court.lessonPeriods.afternoon.occupancyRate.toFixed(2), court.lessonPeriods.evening.occupancyRate.toFixed(2)]);
@@ -5817,24 +3447,24 @@ function exportOccupancyComplete() {
     });
     allContent.push([""]);
 
-    // G.4: Nova seção — Resumo por Dia da Semana
+    // G.4: Nova seÃ§Ã£o â€” Resumo por Dia da Semana
     allContent.push(["=================================================================="]);
-    allContent.push(["6. LEGENDA E MÉTODOS DE CÁLCULO"]);
+    allContent.push(["6. LEGENDA E MÃ‰TODOS DE CÃLCULO"]);
     allContent.push(["=================================================================="]);
     allContent.push([""]);
-    allContent.push(["Conceito", "Definição"]);
-    allContent.push(["Minutos Totais Disponíveis", "Número de minutos que a quadra estava disponível no período analisado"]);
-    allContent.push(["Minutos Ocupados", "Número de minutos efetivamente utilizados por jogadores ou aulas"]);
-    allContent.push(["Taxa de Ocupação (%)", "(Minutos Ocupados / Minutos Totais Disponíveis) × 100"]);
-    allContent.push(["Taxa Média", "Média aritmética das taxas de ocupação dos três períodos do dia"]);
+    allContent.push(["Conceito", "DefiniÃ§Ã£o"]);
+    allContent.push(["Minutos Totais DisponÃ­veis", "NÃºmero de minutos que a quadra estava disponÃ­vel no perÃ­odo analisado"]);
+    allContent.push(["Minutos Ocupados", "NÃºmero de minutos efetivamente utilizados por jogadores ou aulas"]);
+    allContent.push(["Taxa de OcupaÃ§Ã£o (%)", "(Minutos Ocupados / Minutos Totais DisponÃ­veis) Ã— 100"]);
+    allContent.push(["Taxa MÃ©dia", "MÃ©dia aritmÃ©tica das taxas de ocupaÃ§Ã£o dos trÃªs perÃ­odos do dia"]);
     allContent.push([""]);
 
     allContent.push(["=================================================================="]);
-    allContent.push(["7. RESUMO POR DIA DA SEMANA (últimos 30 dias)"]);
+    allContent.push(["7. RESUMO POR DIA DA SEMANA (Ãºltimos 30 dias)"]);
     allContent.push(["=================================================================="]);
     allContent.push([""]);
-    allContent.push(["Dia da Semana", "Total de Atividades", "Minutos Totais", "Taxa de Ocupação Média (%)"]);
-    const diasSemana = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+    allContent.push(["Dia da Semana", "Total de Atividades", "Minutos Totais", "Taxa de OcupaÃ§Ã£o MÃ©dia (%)"]);
+    const diasSemana = ["Domingo","Segunda","TerÃ§a","Quarta","Quinta","Sexta","SÃ¡bado"];
     const totalDisp = PERIODS.morning.totalMinutes + PERIODS.afternoon.totalMinutes + PERIODS.evening.totalMinutes;
     const periodoInicio = startDate.toLocaleDateString('pt-BR');
     const periodoFim = endDate.toLocaleDateString('pt-BR');
@@ -5868,10 +3498,10 @@ function exportOccupancyComplete() {
     link.setAttribute("href", url);
     link.setAttribute("download", `relatorio_completo_ocupacao_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    showToast("Relatório completo exportado com sucesso!", "success");
+    showToast("RelatÃ³rio completo exportado com sucesso!", "success");
 }
 // ============================================================
-// EDIÇÃO DE GRUPO NA FILA DE ESPERA
+// EDIÃ‡ÃƒO DE GRUPO NA FILA DE ESPERA
 // ============================================================
 let activeWaitlistEditId = null;
 
@@ -5880,17 +3510,17 @@ function openWaitlistEditModal(id) {
     if (!item) return;
     activeWaitlistEditId = id;
 
-    // Subtítulo
+    // SubtÃ­tulo
     const idx = state.waitlist.findIndex(w => String(w.id) === String(id));
-    document.getElementById('waitlist-edit-subtitle').textContent = `Grupo ${idx + 1} · Inscrito às ${item.registrationTime}`;
+    document.getElementById('waitlist-edit-subtitle').textContent = `Grupo ${idx + 1} Â· Inscrito Ã s ${item.registrationTime}`;
 
     // Atividade
     document.getElementById('we-activity').value = item.activity || 'Dupla';
 
-    // Horário de inscrição
+    // HorÃ¡rio de inscriÃ§Ã£o
     document.getElementById('we-registration-time').value = item.registrationTime || '';
 
-    // Observação
+    // ObservaÃ§Ã£o
     document.getElementById('we-observation').value = item.observation || '';
 
     // Renderizar linhas de jogadores
@@ -5922,7 +3552,7 @@ function renderWaitlistEditPlayerRows(item) {
         const existingTitle = item && item.titles && item.titles[i] ? item.titles[i] : '';
         container.innerHTML += `
             <div class="grid grid-cols-2 gap-3" id="we-row-${i}">
-                <input type="text" id="we-title-${i}" placeholder="Título" value="${existingTitle}"
+                <input type="text" id="we-title-${i}" placeholder="TÃ­tulo" value="${existingTitle}"
                     oninput="searchMember(${i}, this.value, 'we')"
                     class="input-glass p-3 rounded-xl text-sm font-bold">
                 <select id="we-p-name-${i}" class="input-glass p-3 rounded-xl text-sm font-bold">
@@ -5947,7 +3577,7 @@ function saveWaitlistEdit() {
     const registrationTime = document.getElementById('we-registration-time').value;
     const observation = document.getElementById('we-observation').value.trim();
 
-    // Coletar jogadores e títulos
+    // Coletar jogadores e tÃ­tulos
     const players = [], titles = [];
     let numPlayers = 4;
     if (activity === 'Simples' || activity === 'Ranking adulto' || activity === 'Ranking infantil') numPlayers = 2;
@@ -5965,7 +3595,7 @@ function saveWaitlistEdit() {
 
     if (players.length === 0) return showToast("Adicione pelo menos um jogador!", "error");
 
-    // Verificar regra de SEM PREFERÊNCIA (dupla)
+    // Verificar regra de SEM PREFERÃŠNCIA (dupla)
     let repeat = false;
     if (activity === "Dupla") {
         for (let i = 0; i < titles.length; i++) {
@@ -5994,11 +3624,11 @@ function saveWaitlistEdit() {
 }
 
 // ============================================================
-// GERENCIAMENTO DE SUB-ABAS DE HORÁRIOS DE AULAS
+// GERENCIAMENTO DE SUB-ABAS DE HORÃRIOS DE AULAS
 // ============================================================
 
 /**
- * Alterna entre as sub-abas de horários (Editor / Visualizar Semana)
+ * Alterna entre as sub-abas de horÃ¡rios (Editor / Visualizar Semana)
  */
 function switchLessonTab(tabName) {
     // Esconder todas as abas
@@ -6006,7 +3636,7 @@ function switchLessonTab(tabName) {
         tab.classList.remove('active');
     });
     
-    // Remover classe active de todos os botões
+    // Remover classe active de todos os botÃµes
     document.querySelectorAll('.lesson-tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -6015,24 +3645,24 @@ function switchLessonTab(tabName) {
     const selectedTab = document.getElementById(`lesson-tab-${tabName}`);
     if (selectedTab) selectedTab.classList.add('active');
     
-    // Marcar botão como ativo
+    // Marcar botÃ£o como ativo
     const selectedBtn = document.querySelector(`[data-lesson-tab="${tabName}"]`);
     if (selectedBtn) selectedBtn.classList.add('active');
     
-    // Se for a aba de preview, renderizar o calendário
+    // Se for a aba de preview, renderizar o calendÃ¡rio
     if (tabName === 'preview') {
         renderLessonWeeklyPreview();
     }
 }
 
 /**
- * Renderiza a visualização semanal de horários de aulas
+ * Renderiza a visualizaÃ§Ã£o semanal de horÃ¡rios de aulas
  */
 function renderLessonWeeklyPreview() {
     const container = document.getElementById('lesson-weekly-preview');
     if (!container) return;
     
-    const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    const days = ['Segunda', 'TerÃ§a', 'Quarta', 'Quinta', 'Sexta', 'SÃ¡bado', 'Domingo'];
     const dayNumbers = [1, 2, 3, 4, 5, 6, 0];
     
     let html = '';
@@ -6054,7 +3684,7 @@ function renderLessonWeeklyPreview() {
             const daySchedules = schedules.filter(s => s.days.includes(dayNum));
             
             if (daySchedules.length === 0) {
-                html += `<div class="text-[10px] text-gray-500"><strong>${day}:</strong> Não configurado</div>`;
+                html += `<div class="text-[10px] text-gray-500"><strong>${day}:</strong> NÃ£o configurado</div>`;
                 return;
             }
             
@@ -6079,11 +3709,11 @@ function renderLessonWeeklyPreview() {
         `;
     });
     
-    container.innerHTML = html || '<div class="col-span-full text-center text-gray-500 py-8">Nenhum horário configurado</div>';
+    container.innerHTML = html || '<div class="col-span-full text-center text-gray-500 py-8">Nenhum horÃ¡rio configurado</div>';
 }
 
 /**
- * Renderiza o editor de horários de aulas por quadra
+ * Renderiza o editor de horÃ¡rios de aulas por quadra
  */
 function renderLessonScheduleEditor() {
     const container = document.getElementById('lesson-schedule-editor');
@@ -6093,9 +3723,9 @@ function renderLessonScheduleEditor() {
     
     state.courts.forEach(court => {
         const schedules = FIXED_SCHEDULES[court] || [];
-        const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+        const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b', 'Dom'];
         const dayNumbers = [1, 2, 3, 4, 5, 6, 0];
-        const dayMap = {0:'Dom', 1:'Seg', 2:'Ter', 3:'Qua', 4:'Qui', 5:'Sex', 6:'Sáb'};
+        const dayMap = {0:'Dom', 1:'Seg', 2:'Ter', 3:'Qua', 4:'Qui', 5:'Sex', 6:'SÃ¡b'};
         
         html += `
             <div class="glass-card p-4 rounded-xl space-y-3">
@@ -6121,7 +3751,7 @@ function renderLessonScheduleEditor() {
                         <div class="text-sm font-bold text-white">${daysList}</div>
                     </div>
                     <div class="flex-1">
-                        <div class="text-[10px] text-gray-500 uppercase font-bold">Horário</div>
+                        <div class="text-[10px] text-gray-500 uppercase font-bold">HorÃ¡rio</div>
                         <div class="text-sm font-bold text-white">${schedule.start} - ${schedule.end}</div>
                     </div>
                     <div class="flex-1">
@@ -6139,7 +3769,7 @@ function renderLessonScheduleEditor() {
         
         html += `
                     <button onclick="addLessonSchedule('${court}')" class="w-full py-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all">
-                        <i class="fas fa-plus mr-2"></i>Adicionar Período
+                        <i class="fas fa-plus mr-2"></i>Adicionar PerÃ­odo
                     </button>
                 </div>
             </div>
@@ -6165,20 +3795,20 @@ function toggleLessonCourtEditor(court) {
 }
 
 /**
- * Remove um período de aula
+ * Remove um perÃ­odo de aula
  */
 function removeLessonSchedule(court, index) {
-    if (!confirm('Deseja remover este período?')) return;
+    if (!confirm('Deseja remover este perÃ­odo?')) return;
     
     if (FIXED_SCHEDULES[court] && FIXED_SCHEDULES[court][index]) {
         FIXED_SCHEDULES[court].splice(index, 1);
         renderLessonScheduleEditor();
-        showToast('Período removido!', 'success');
+        showToast('PerÃ­odo removido!', 'success');
     }
 }
 
 /**
- * Adiciona um novo período de aula
+ * Adiciona um novo perÃ­odo de aula
  */
 function addLessonSchedule(court) {
     const newSchedule = {
@@ -6191,36 +3821,33 @@ function addLessonSchedule(court) {
     if (!FIXED_SCHEDULES[court]) FIXED_SCHEDULES[court] = [];
     FIXED_SCHEDULES[court].push(newSchedule);
     renderLessonScheduleEditor();
-    showToast('Período adicionado! Configure os horários.', 'info');
+    showToast('PerÃ­odo adicionado! Configure os horÃ¡rios.', 'info');
 }
 
 /**
- * Salva as configurações de horários de aulas
+ * Salva as configuraÃ§Ãµes de horÃ¡rios de aulas
  */
 function saveFixedSchedules() {
     storage.set('rq_pro_fixed_schedules', JSON.stringify(FIXED_SCHEDULES));
     applyFixedSchedules();
     render();
-    showToast('Horários de aulas salvos com sucesso!', 'success');
+    showToast('HorÃ¡rios de aulas salvos com sucesso!', 'success');
 }
 
 /**
- * Reseta os horários para os padrões
+ * Reseta os horÃ¡rios para os padrÃµes
  */
 function resetFixedSchedules() {
-    if (!confirm('Deseja resetar todos os horários para os padrões?')) return;
+    if (!confirm('Deseja resetar todos os horÃ¡rios para os padrÃµes?')) return;
     
     storage.remove('rq_pro_fixed_schedules');
     location.reload();
 }
 
-// Inicializar o renderizador de horários ao carregar a página
+// Inicializar o renderizador de horÃ¡rios ao carregar a pÃ¡gina
 window.addEventListener('load', () => {
     renderLessonScheduleEditor();
 });
 
 
 
-    </script>
-</body>
-</html>

@@ -1,3 +1,5 @@
+// NÃO CONECTADO AO index.html — referência para modularização futura, ver prompt-reorganizacao-reservaquadras.md
+
 import { state, saveLocal, storage } from './state.js';
 
 export const FIXED_SCHEDULES = {
