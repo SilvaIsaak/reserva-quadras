@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "rq_state": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "rq_public": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "$outro": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}

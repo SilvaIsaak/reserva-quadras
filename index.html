@@ -1245,8 +1245,8 @@ select.input-glass option:hover {
 
                 <!-- Online indicator -->
                 <span class="nav-online-dot">
-                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block"></span>
-                    <span class="nav-online-label text-[7px] font-bold text-emerald-400">ONLINE</span>
+                    <span id="conn-dot" class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block"></span>
+                    <span id="conn-label" class="nav-online-label text-[7px] font-bold text-emerald-400">ONLINE</span>
                 </span>
             </div>
         </div>
@@ -2433,7 +2433,15 @@ const storage = {
             const stringVal = typeof val === 'string' ? val : JSON.stringify(val);
             localStorage.setItem(key, stringVal);
         } catch (e) {
-            console.warn(`LocalStorage write denied for ${key}.`);
+            console.warn(`LocalStorage write denied for ${key}.`, e);
+            // Cota estourada ou acesso negado. Falhar em silêncio significava perder
+            // cadastros de sócios sem nenhum sinal na tela.
+            if (!storage._warned) {
+                storage._warned = true;
+                try {
+                    showToast('Não foi possível salvar neste dispositivo (armazenamento cheio). Avise a diretoria.', 'error');
+                } catch (_) {}
+            }
         }
     },
     remove: (key) => {
@@ -2756,6 +2764,23 @@ const FIXED_SCHEDULES = {
     ]
 };
 
+// Recarrega a grade personalizada salva em saveFixedSchedules().
+// Sem isso, o editor de horários gravava no localStorage e nunca lia de volta:
+// a tela dizia "salvo com sucesso" e o próximo F5 restaurava o padrão acima.
+(function hydrateFixedSchedules() {
+    const saved = storage.get('rq_pro_fixed_schedules');
+    if (!saved) return;
+    try {
+        const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            Object.keys(FIXED_SCHEDULES).forEach(k => delete FIXED_SCHEDULES[k]);
+            Object.assign(FIXED_SCHEDULES, parsed);
+        }
+    } catch (e) {
+        console.warn('Grade de aulas salva é inválida — mantendo o padrão.', e);
+    }
+})();
+
 // Função para obter o status atual de uma quadra com base nas agendas fixas
 function getFixedStatus(courtName) {
     const now = new Date();
@@ -2791,11 +2816,24 @@ let lastClosingDate = storage.get('last_closing_date') || '';
 let firebaseApp = null;
 let firebaseDb = null;
 let isCloudSyncing = false;
+let _syncWatchdog = null;
+
+function _finishCloudSync() {
+    if (_syncWatchdog) { clearTimeout(_syncWatchdog); _syncWatchdog = null; }
+    isCloudSyncing = false;
+}
 
 // Função para encerrar todas as atividades às 22:00
-function closeAllActivities() {
-    const now = new Date();
-    const currentDate = now.toLocaleDateString('pt-BR');
+function closeAllActivities(options) {
+    const opts = options || {};
+    const now = getAccurateNow();
+    // `dateStr` permite encerrar retroativamente um dia anterior (ver closeStaleActivities)
+    const currentDate = opts.dateStr || now.toLocaleDateString('pt-BR');
+    const weekdayName = (() => {
+        const d = parseDate(currentDate);
+        return d ? d.toLocaleDateString('pt-BR', { weekday: 'long' })
+                 : now.toLocaleDateString('pt-BR', { weekday: 'long' });
+    })();
     
     // Verificar se já encerramos hoje
     if (lastClosingDate === currentDate) {
@@ -2804,8 +2842,8 @@ function closeAllActivities() {
     
     const currentHour = now.getHours();
     
-    // Verificar se é 22:00 ou depois
-    if (currentHour < 22) {
+    // Verificar se é 22:00 ou depois (o fechamento retroativo ignora o horário)
+    if (!opts.force && currentHour < 22) {
         return;
     }
     
@@ -2839,7 +2877,7 @@ function closeAllActivities() {
         state.history.push({ 
             ...booking, 
             date: currentDate, 
-            weekday: now.toLocaleDateString('pt-BR', { weekday: 'long' }), 
+            weekday: weekdayName, 
             endTime: endTime, 
             playDuration: playDuration > 0 ? playDuration : 0, 
             waitDuration: waitDuration > 0 ? waitDuration : 0,
@@ -2873,7 +2911,101 @@ function closeAllActivities() {
     render();
     
     // Mostrar notificação
-    showToast("Todas as atividades encerradas automaticamente às 22:00!", "info");
+    if (opts.force) {
+        showToast(`Atividades pendentes de ${currentDate} foram encerradas e gravadas no histórico.`, "info");
+    } else {
+        showToast("Todas as atividades encerradas automaticamente às 22:00!", "info");
+    }
+}
+
+// Grava uma reserva no histórico com as métricas derivadas já calculadas.
+function archiveBookingToHistory(booking, reason, endTimeStr) {
+    const now = getAccurateNow();
+    const endTime = endTimeStr || now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    let playDuration = 0;
+    if (booking.startTime) {
+        try {
+            const [h1, m1] = booking.startTime.split(':').map(Number);
+            const [h2, m2] = endTime.split(':').map(Number);
+            playDuration = (h2 * 60 + m2) - (h1 * 60 + m1);
+            if (playDuration < 0) playDuration += 24 * 60;
+        } catch (e) {}
+    }
+
+    let waitDuration = 0;
+    if (booking.registrationTime && booking.startTime && !booking.type) {
+        try {
+            const [h1, m1] = booking.registrationTime.split(':').map(Number);
+            const [h2, m2] = booking.startTime.split(':').map(Number);
+            waitDuration = (h2 * 60 + m2) - (h1 * 60 + m1);
+        } catch (e) {}
+    }
+
+    state.history.push({
+        ...booking,
+        date: getTodayDate(),
+        weekday: getWeekdayName(),
+        endTime,
+        playDuration: playDuration > 0 ? playDuration : 0,
+        waitDuration: waitDuration > 0 ? waitDuration : 0,
+        tempoEsperaMin: waitDuration > 0 ? waitDuration : 0,
+        totalJogadores: (booking.players || []).length,
+        periodoStr: getPeriodoStr(booking.startTime),
+        activity: booking.type === 'lesson' ? "AULA" : (booking.activity || "OUTRO"),
+        encerradoPor: reason
+    });
+}
+
+// Fechamento retroativo. O encerramento das 22:00 só roda com a página aberta —
+// se a recepção fechasse o navegador às 21h, na manhã seguinte as quadras
+// apareciam ocupadas com os jogadores do dia anterior (e ficavam assim o dia
+// inteiro), e o histórico daquele dia nunca era gravado.
+function closeStaleActivities() {
+    const todayDate = getTodayDate();
+    const lastActive = storage.get('last_active_date');
+
+    if (lastActive && lastActive !== todayDate && (state.bookings.length > 0 || state.waitlist.length > 0)) {
+        lastClosingDate = ''; // liberar o guard "já encerramos hoje" para a data anterior
+        closeAllActivities({ force: true, dateStr: lastActive });
+    }
+
+    storage.set('last_active_date', todayDate);
+}
+
+// Reflete o estado real da conexão no indicador da barra e no painel de nuvem.
+let _lastConnectionState = null;
+let _connectionToastsReady = false;
+setTimeout(() => { _connectionToastsReady = true; }, 8000);
+
+function setConnectionState(online) {
+    const dot = document.getElementById('conn-dot');
+    const label = document.getElementById('conn-label');
+    if (dot) {
+        dot.classList.toggle('bg-emerald-400', online);
+        dot.classList.toggle('animate-pulse', online);
+        dot.classList.toggle('bg-red-500', !online);
+    }
+    if (label) {
+        label.innerText = online ? 'ONLINE' : 'OFFLINE';
+        label.classList.toggle('text-emerald-400', online);
+        label.classList.toggle('text-red-400', !online);
+    }
+    const statusEl = document.getElementById('cloud-status');
+    if (statusEl) {
+        statusEl.innerText = online ? 'CONECTADO' : 'SEM CONEXÃO';
+        statusEl.classList.remove('text-gray-500');
+        statusEl.classList.toggle('text-emerald-400', online);
+        statusEl.classList.toggle('text-red-400', !online);
+    }
+    if (_connectionToastsReady && _lastConnectionState !== null && _lastConnectionState !== online) {
+        showToast(
+            online ? 'Conexão restabelecida — sincronizando.'
+                   : 'Sem conexão! As alterações ficam só neste dispositivo até a internet voltar.',
+            online ? 'success' : 'warning'
+        );
+    }
+    _lastConnectionState = online;
 }
 
 function connectFirebase() {
@@ -2912,10 +3044,12 @@ function connectFirebase() {
             }
         });
 
-        if(statusEl) {
-            statusEl.innerText = "CONECTADO";
-            statusEl.classList.replace('text-gray-500', 'text-emerald-400');
-        }
+        // Estado real da conexão. O indicador "ONLINE" da barra era HTML fixo:
+        // ficava verde e pulsando mesmo com o cabo de rede arrancado, dando
+        // confiança falsa justamente quando os dados não estavam sendo salvos.
+        firebaseDb.ref('.info/connected').on('value', (snap) => {
+            setConnectionState(snap.val() === true);
+        });
         showToast("Conectado à Nuvem!", "success");
     } catch (err) {
         console.error(err);
@@ -2987,6 +3121,11 @@ function save() {
     saveLocal();
     if (firebaseDb) {
         isCloudSyncing = true;
+        // Trava de segurança: se a promise do Firebase nunca resolver (queda de
+        // conexão), isCloudSyncing ficava true para sempre e este dispositivo
+        // parava de aceitar as atualizações dos outros até alguém apertar F5.
+        if (_syncWatchdog) clearTimeout(_syncWatchdog);
+        _syncWatchdog = setTimeout(() => { isCloudSyncing = false; }, 10000);
         
         // Sanitizar dados para evitar erro de 'undefined' no Firebase
         const sanitizedData = JSON.parse(JSON.stringify({
@@ -3004,10 +3143,13 @@ function save() {
         }));
 
         firebaseDb.ref('rq_state').set(sanitizedData).then(() => {
-            isCloudSyncing = false;
+            _finishCloudSync();
         }).catch((err) => {
             console.error("Erro ao salvar no Firebase:", err);
-            isCloudSyncing = false;
+            _finishCloudSync();
+            // Antes a falha só ia para o console: a recepção via "Partida iniciada!"
+            // com confete enquanto nada chegava ao servidor.
+            showToast("Falha ao salvar na nuvem — dados gravados apenas neste dispositivo.", "error");
         });
     }
 }
@@ -3503,6 +3645,17 @@ function setCourtStatus(type) {
         releaseCourt(state.activeAdminCourt);
     } else {
         // Para outros status, remover qualquer reserva existente e adicionar o novo status
+        const _court = state.activeAdminCourt;
+        const _existing = state.bookings.find(b => b.court === _court);
+        // Se havia atividade em andamento, gravar no histórico antes de sobrescrever.
+        // Antes o registro era descartado em silêncio, sem confirmação e sem volta.
+        if (_existing && !['blocked', 'rain', 'tournament'].includes(_existing.type)) {
+            const _label = (_existing.players || []).join(', ') || 'atividade em andamento';
+            if (!confirm(`A ${_court} tem uma atividade em andamento (${_label}).\n\nEla será encerrada e registrada no histórico. Continuar?`)) {
+                return;
+            }
+            archiveBookingToHistory(_existing, `encerrado_por_${type}`);
+        }
         state.bookings = state.bookings.filter(b => b.court !== state.activeAdminCourt);
         state.bookings.push({
             id: Date.now(), court: state.activeAdminCourt, type: type,
@@ -3735,7 +3888,15 @@ function updateDashboard() {
     setElText('stat-games-min', gamesMin > 0 ? `${gamesMin} min` : "-- min");
     setElText('stat-ranking-min', rankingMin > 0 ? `${rankingMin} min` : "-- min");
     
-    const playerCounts = {}; todayHistory.forEach(h => h.players.forEach(p => playerCounts[p] = (playerCounts[p] || 0) + 1));
+    // Ignorar marcadores automáticos: aulas entram no histórico com players: ["AULA"]
+    // e bloqueios com ["BLOCKED"]/["RAIN"], que venciam qualquer sócio real na contagem.
+    // O `|| []` também evita quebrar o dashboard num registro sem jogadores.
+    const playerCounts = {};
+    todayHistory.forEach(h => (h.players || []).forEach(p => {
+        const key = String(p).toUpperCase();
+        if (key === 'AULA' || NON_PLAY_ACTIVITIES.includes(key)) return;
+        playerCounts[p] = (playerCounts[p] || 0) + 1;
+    }));
     const topPlayer = Object.entries(playerCounts).sort((a,b) => b[1] - a[1])[0];
     setElText('stat-top-player', topPlayer ? topPlayer[0] : "--");
     
@@ -3763,8 +3924,7 @@ function updateDashboard() {
         });
     }
     
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = buildDateRange(30);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
     setElText('occ-avg-rate', analytics.overall.averageOccupancyRate.toFixed(1) + '%');
@@ -3941,9 +4101,29 @@ const PERIODS = {
     evening: { name: "Noite", startHour: 18, startMinute: 31, endHour: 22, endMinute: 0, totalMinutes: 210 }
 };
 
+// Status que representam indisponibilidade da quadra, não uso por sócios.
+const NON_PLAY_ACTIVITIES = ['BLOCKED', 'RAIN', 'TOURNAMENT'];
+
+// Constrói uma janela de N dias corridos terminando agora, com o início
+// normalizado à meia-noite — necessário para o denominador de dias fechar.
+function buildDateRange(days) {
+    const end = getAccurateNow();
+    const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - (Math.max(1, days) - 1));
+    return { startDate: start, endDate: end };
+}
+
+// Dias de calendário no intervalo, inclusive nas duas pontas.
+// A conta anterior (`Math.ceil(diff / 1 dia) + 1`) devolvia 2 para o filtro
+// "Hoje" em qualquer horário do dia, dobrando o divisor e cortando a taxa
+// de ocupação pela metade.
+function countDaysInRange(startDate, endDate) {
+    const s = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const e = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    return Math.max(1, Math.round((e - s) / 86400000) + 1);
+}
+
 function calculateRollingOccupancyAnalytics() {
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = buildDateRange(30);
     return calculateOccupancyAnalytics(startDate, endDate);
 }
 
@@ -3963,7 +4143,12 @@ function parseDate(dateStr) {
     if (!dateStr) return null;
     const parts = dateStr.split('/');
     if (parts.length !== 3) return null;
-    return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    const [d, m, y] = parts.map(Number);
+    if (!d || !m || !y) return null;
+    // Construir no fuso local. `new Date("2026-08-06")` é interpretado como UTC,
+    // o que no horário de Brasília cai no dia anterior às 21:00 — deslocando o
+    // gráfico por dia da semana em 1 dia e zerando o KPI "Jogos Hoje".
+    return new Date(y, m - 1, d);
 }
 
 function calculateOccupancyAnalytics(startDate, endDate) {
@@ -4002,12 +4187,15 @@ function calculateOccupancyAnalytics(startDate, endDate) {
     
     const relevantHistory = state.history.filter(h => {
         if (!h.date) return false;
+        // Bloqueio e chuva são indisponibilidade, não uso: contá-los como ocupação
+        // fazia uma quadra em manutenção aparecer como 100% ocupada.
+        if (NON_PLAY_ACTIVITIES.includes(String(h.activity || '').toUpperCase())) return false;
         const [d, m, y] = h.date.split('/').map(Number);
         const histDate = new Date(y, m - 1, d);
         return histDate >= startDate && histDate <= endDate;
     });
     
-    const daysInRange = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    const daysInRange = countDaysInRange(startDate, endDate);
     
     relevantHistory.forEach(h => {
         if (!h.court || !courtData[h.court]) return;
@@ -4122,8 +4310,7 @@ function formatHours(totalMinutes) {
 }
 
 function exportOccupancyByCourt() {
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = buildDateRange(30);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
     if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
@@ -4166,8 +4353,7 @@ function exportOccupancyByCourt() {
 }
 
 function exportOccupancyHourly() {
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = buildDateRange(30);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
     if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
@@ -4193,8 +4379,7 @@ function exportOccupancyHourly() {
 }
 
 function exportOccupancySummary() {
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = buildDateRange(30);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
     if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
@@ -4243,8 +4428,7 @@ function exportOccupancySummary() {
 }
 
 function exportOccupancyByActivity() {
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = buildDateRange(30);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     
     if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
@@ -4474,13 +4658,13 @@ function renderPublicAnalytics() {
     } else {
         endDate = new Date();
         
-        if (currentAnalyticsPeriod === 'day') {
-            startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-        } else if (currentAnalyticsPeriod === 'week') {
-            startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-        } else {
-            startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-        }
+        // Janelas normalizadas: 1 = apenas hoje, 7 = últimos 7 dias, 30 = últimos 30 dias.
+        // O início vai para a meia-noite, senão o primeiro dia entra só pela metade
+        // e o divisor de dias não fecha com os dados realmente incluídos.
+        const _days = currentAnalyticsPeriod === 'day' ? 1 : (currentAnalyticsPeriod === 'week' ? 7 : 30);
+        const _range = buildDateRange(_days);
+        startDate = _range.startDate;
+        endDate = _range.endDate;
         analytics = calculateOccupancyAnalytics(startDate, endDate);
     }
 
@@ -4583,7 +4767,7 @@ function renderPublicAnalytics() {
     // ---- Período (Manhã/Tarde/Noite) ----
     const periodContainer = document.getElementById('pub-period-bars');
     if (periodContainer) {
-        const daysInRange = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        const daysInRange = countDaysInRange(startDate, endDate);
         const periods = [
             { name: 'Manhã', key: 'morning', icon: 'fa-sun', color: 'text-amber-400', bg: 'bg-amber-500' },
             { name: 'Tarde', key: 'afternoon', icon: 'fa-cloud-sun', color: 'text-orange-400', bg: 'bg-orange-500' },
@@ -4987,11 +5171,13 @@ setInterval(() => {
 
 // Executar verificações pesadas com menos frequência (a cada 30 segundos)
 setInterval(() => {
+    closeStaleActivities(); // cobre a virada da meia-noite com a página aberta
     applyFixedSchedules();
     closeAllActivities();
     render();
 }, 30000);
 
+closeStaleActivities();
 applyFixedSchedules();
 // Recuperar sessão do usuário
 const savedUser = storage.get('rq_pro_user');
@@ -5007,6 +5193,11 @@ if (savedUser && USER_ROLES[savedUser]) {
     }
 }
 if (state.settings.firebaseConfig) connectFirebase();
+
+// Fallback do indicador para quando o Firebase não está configurado
+window.addEventListener('online', () => setConnectionState(true));
+window.addEventListener('offline', () => setConnectionState(false));
+setConnectionState(navigator.onLine);
 
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -5536,20 +5727,34 @@ function _doReleaseCourt(court, until) {
 function showToastWithAction(msg, actionLabel, onAction) {
     const container = document.getElementById('toast-container');
     if (!container) return;
-    const id = 'toast-action-' + Date.now();
     const div = document.createElement('div');
-    div.id = id;
     div.className = 'glass-card px-5 py-4 rounded-2xl shadow-xl border border-white/10 flex items-center gap-4 max-w-sm w-full bg-indigo-500/10';
+    // O callback é ligado por addEventListener, não serializado no onclick.
+    // A versão anterior usava `onAction.toString()`, o que reexecutava a função
+    // fora do escopo original: as variáveis capturadas (nextGroup, court) não
+    // existiam mais e o botão falhava com ReferenceError.
     div.innerHTML = `
         <span class="flex-1 text-sm font-bold text-white">${msg}</span>
-        <button onclick="(${onAction.toString()})(); document.getElementById('${id}')?.remove();" 
+        <button data-role="confirm"
             class="shrink-0 px-4 py-2 rounded-xl bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest hover:brightness-110 transition-all">
             ${actionLabel}
         </button>
-        <button onclick="document.getElementById('${id}')?.remove();" class="shrink-0 text-gray-500 hover:text-white text-lg leading-none">&times;</button>
+        <button data-role="dismiss" class="shrink-0 text-gray-500 hover:text-white text-lg leading-none">&times;</button>
     `;
+    let timer = null;
+    const close = () => { if (timer) clearTimeout(timer); div.remove(); };
+    div.querySelector('[data-role="confirm"]').addEventListener('click', () => {
+        try {
+            onAction();
+        } catch (e) {
+            console.error('Erro ao executar ação do toast:', e);
+            showToast('Não foi possível concluir a ação.', 'error');
+        }
+        close();
+    });
+    div.querySelector('[data-role="dismiss"]').addEventListener('click', close);
     container.appendChild(div);
-    setTimeout(() => div.remove(), 12000);
+    timer = setTimeout(close, 12000);
 }
 
 // Substituir releaseCourt pelo novo fluxo com modal de opção para aulas
@@ -5569,6 +5774,9 @@ function releaseCourt(court) {
 function applyFixedSchedules() {
     const todayDate = getTodayDate();
     const weekdayName = getWeekdayName();
+    const _stateSignature = () => state.bookings.map(b => `${b.court}:${b.type || ''}:${b.id}`).join('|')
+        + '#' + state.history.length + '#' + state.manuallyReleasedLessons.length;
+    const _sigBefore = _stateSignature();
 
     const lastDateForReset = storage.get('last_reset_date') || '';
     if (lastDateForReset !== todayDate) {
@@ -5659,7 +5867,13 @@ function applyFixedSchedules() {
             state.bookings = state.bookings.filter(b => b.court !== courtName);
         }
     }
-    saveLocal();
+    if (_stateSignature() !== _sigBefore) {
+        // Antes só chamava saveLocal(): as aulas automáticas e o histórico gerado
+        // aqui ficavam apenas neste dispositivo e o próximo snapshot da nuvem os apagava.
+        save();
+    } else {
+        saveLocal();
+    }
 }
 
 // H.4: Calcular próxima transição de quadra
@@ -5781,8 +5995,7 @@ function renderAdmin() {
 
 // G.4: exportOccupancyComplete com seção "Resumo por Dia da Semana"
 function exportOccupancyComplete() {
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const { startDate, endDate } = buildDateRange(30);
     const analytics = calculateOccupancyAnalytics(startDate, endDate);
     if (analytics.courts.length === 0) return showToast("Nenhum dado de ocupação para exportar!", "warning");
 
@@ -5809,7 +6022,7 @@ function exportOccupancyComplete() {
     allContent.push(["=================================================================="]);
     allContent.push([""]);
     allContent.push(["Período", "Horário", "Minutos Totais Disponíveis", "Minutos Ocupados", "Taxa de Ocupação (%)", "Fórmula"]);
-    const daysInRange = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    const daysInRange = countDaysInRange(startDate, endDate);
     const morningTotalMin = PERIODS.morning.totalMinutes * daysInRange * analytics.courts.length;
     const morningOccupiedMin = analytics.courts.reduce((sum, c) => sum + c.periods.morning.occupiedMinutes, 0);
     const morningRate = morningTotalMin > 0 ? Math.min((morningOccupiedMin / morningTotalMin) * 100, 100) : 0;
