@@ -4893,42 +4893,77 @@ let _timeSynced = false;
 const _clockEl = () => document.getElementById('public-clock');
 const _syncIndicatorEl = () => document.getElementById('clock-sync-indicator');
 
-async function syncInternetTime() {
+async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     try {
-        // Tenta timeapi.io primeiro (sem CORS issues)
-        const res = await fetch('https://timeapi.io/api/time/current/zone?timeZone=America%2FSao_Paulo', { cache: 'no-store' });
-        if (!res.ok) throw new Error('timeapi falhou');
-        const data = await res.json();
-        // data.dateTime ex: "2025-06-02T14:35:22.123"
-        const serverMs = new Date(data.dateTime).getTime();
-        _timeOffset = serverMs - Date.now();
-        _timeSynced = true;
-        if (_syncIndicatorEl()) {
-            _syncIndicatorEl().title = 'Horário sincronizado com a internet';
-            _syncIndicatorEl().classList.replace('text-gray-500','text-emerald-400');
-        }
-    } catch(e) {
-        // Fallback: worldtimeapi
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+// Cada fonte devolve o instante do servidor em ms desde epoch, medido entre t0 (antes do fetch)
+// e t1 (depois da resposta) para compensar a latência da requisição — ver getAccurateNow().
+// A Cloudflare vem primeiro: é a rede mais confiável das três (o endpoint de trace roda em
+// qualquer ponto de presença da CDN), enquanto timeapi.io e worldtimeapi.org já flagraram ficar
+// minutos fora do ar/desatualizados. Manter os dois como fallback ainda ajuda quando a Cloudflare
+// falhar, mas nenhuma fonte única de terceiros deve ser aceita sem essa cadeia de reserva.
+const TIME_SOURCES = [
+    {
+        label: 'Cloudflare',
+        async fetch() {
+            const res = await fetchWithTimeout('https://cloudflare.com/cdn-cgi/trace', { cache: 'no-store' });
+            if (!res.ok) throw new Error('cloudflare trace falhou');
+            const text = await res.text();
+            const match = text.match(/^ts=([\d.]+)/m);
+            if (!match) throw new Error('cloudflare trace sem ts');
+            return parseFloat(match[1]) * 1000;
+        },
+    },
+    {
+        label: 'timeapi.io',
+        async fetch() {
+            const res = await fetchWithTimeout('https://timeapi.io/api/time/current/zone?timeZone=America%2FSao_Paulo', { cache: 'no-store' });
+            if (!res.ok) throw new Error('timeapi falhou');
+            const data = await res.json();
+            return new Date(data.dateTime).getTime();
+        },
+    },
+    {
+        label: 'worldtimeapi.org (fallback)',
+        async fetch() {
+            const res = await fetchWithTimeout('https://worldtimeapi.org/api/timezone/America/Sao_Paulo', { cache: 'no-store' });
+            if (!res.ok) throw new Error('worldtimeapi falhou');
+            const data = await res.json();
+            return new Date(data.datetime).getTime();
+        },
+    },
+];
+
+async function syncInternetTime() {
+    for (const source of TIME_SOURCES) {
         try {
-            const res2 = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo', { cache: 'no-store' });
-            if (!res2.ok) throw new Error('worldtimeapi falhou');
-            const data2 = await res2.json();
-            const serverMs2 = new Date(data2.datetime).getTime();
-            _timeOffset = serverMs2 - Date.now();
+            const t0 = Date.now();
+            const serverMs = await source.fetch();
+            const t1 = Date.now();
+            _timeOffset = serverMs - (t0 + t1) / 2;
             _timeSynced = true;
             if (_syncIndicatorEl()) {
-                _syncIndicatorEl().title = 'Horário sincronizado (fallback)';
+                _syncIndicatorEl().title = `Horário sincronizado (${source.label})`;
                 _syncIndicatorEl().classList.replace('text-gray-500','text-emerald-400');
             }
-        } catch(e2) {
-            _timeSynced = false;
-            if (_syncIndicatorEl()) {
-                _syncIndicatorEl().title = 'Sem sincronização — usando relógio local';
-                _syncIndicatorEl().classList.replace('text-emerald-400','text-gray-500');
-            }
-            console.warn('[Clock] Falha ao sincronizar horário pela internet. Usando relógio local.');
+            return;
+        } catch(e) {
+            console.warn(`[Clock] Falha ao sincronizar via ${source.label}.`, e);
         }
     }
+    _timeSynced = false;
+    if (_syncIndicatorEl()) {
+        _syncIndicatorEl().title = 'Sem sincronização — usando relógio local';
+        _syncIndicatorEl().classList.replace('text-emerald-400','text-gray-500');
+    }
+    console.warn('[Clock] Todas as fontes de horário falharam. Usando relógio local.');
 }
 
 function getAccurateNow() {

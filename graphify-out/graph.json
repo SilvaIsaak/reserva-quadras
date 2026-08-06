@@ -1,0 +1,477 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {
+    "hyperedges": [
+      {
+        "id": "court_lifecycle_flow",
+        "label": "Court Booking Lifecycle (Booking \u2192 Play \u2192 Release \u2192 History)",
+        "nodes": [
+          "index_html_court_booking_flow",
+          "index_html_waitlist_management",
+          "index_html_release_court_flow",
+          "index_html_activity_reversal",
+          "index_html_booking_rules",
+          "index_html_dashboard_kpis"
+        ],
+        "relation": "form",
+        "confidence": "INFERRED",
+        "confidence_score": 0.95,
+        "source_file": "index.html"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "label": "ReservaQuadras Pro v8 Court Management System",
+      "file_type": "document",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_reservaquadras_pro",
+      "community": 4,
+      "norm_label": "reservaquadras pro v8 court management system"
+    },
+    {
+      "label": "Central State Object (rq_pro_*)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_state_object",
+      "community": 1,
+      "norm_label": "central state object (rq_pro_*)"
+    },
+    {
+      "label": "Three User Profiles (Publico/Diretora/Esportes)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_user_profiles",
+      "community": 1,
+      "norm_label": "three user profiles (publico/diretora/esportes)"
+    },
+    {
+      "label": "PIN-based Login/Authentication",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_pin_login",
+      "community": 1,
+      "norm_label": "pin-based login/authentication"
+    },
+    {
+      "label": "Fixed Lesson Schedules by Court",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_fixed_schedules",
+      "community": 1,
+      "norm_label": "fixed lesson schedules by court"
+    },
+    {
+      "label": "Occupancy Analytics Engine (30-day rolling)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_occupancy_analytics",
+      "community": 2,
+      "norm_label": "occupancy analytics engine (30-day rolling)"
+    },
+    {
+      "label": "Dashboard Real-time KPIs",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_dashboard_kpis",
+      "community": 2,
+      "norm_label": "dashboard real-time kpis"
+    },
+    {
+      "label": "Court Booking and Queue Entry Flow",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_court_booking_flow",
+      "community": 0,
+      "norm_label": "court booking and queue entry flow"
+    },
+    {
+      "label": "Waitlist Management with Drag & Drop",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_waitlist_management",
+      "community": 0,
+      "norm_label": "waitlist management with drag & drop"
+    },
+    {
+      "label": "Granular Court Release (period/time-based)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_release_court_flow",
+      "community": 0,
+      "norm_label": "granular court release (period/time-based)"
+    },
+    {
+      "label": "Activity Reversal/Undo System",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_activity_reversal",
+      "community": 1,
+      "norm_label": "activity reversal/undo system"
+    },
+    {
+      "label": "Firebase Cloud Sync (real-time)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_firebase_cloud_sync",
+      "community": 0,
+      "norm_label": "firebase cloud sync (real-time)"
+    },
+    {
+      "label": "CSV Data Export (G.2/G.4/G.5)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_data_export_system",
+      "community": 2,
+      "norm_label": "csv data export (g.2/g.4/g.5)"
+    },
+    {
+      "label": "Dark/Light/Auto Theme System",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_theme_system",
+      "community": 5,
+      "norm_label": "dark/light/auto theme system"
+    },
+    {
+      "label": "Three.js 3D Animated Tennis Background",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_3d_tennis_background",
+      "community": 3,
+      "norm_label": "three.js 3d animated tennis background"
+    },
+    {
+      "label": "Glassmorphism UI Design Pattern",
+      "file_type": "rationale",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_glassmorphism_ui",
+      "community": 3,
+      "norm_label": "glassmorphism ui design pattern"
+    },
+    {
+      "label": "Mobile-First Responsive Layout",
+      "file_type": "rationale",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_mobile_first_responsive",
+      "community": 3,
+      "norm_label": "mobile-first responsive layout"
+    },
+    {
+      "label": "Internet Time Synchronization (timeapi.io)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_internet_time_sync",
+      "community": 2,
+      "norm_label": "internet time synchronization (timeapi.io)"
+    },
+    {
+      "label": "Toast Notification System with Inline Actions",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_toast_notifications",
+      "community": 0,
+      "norm_label": "toast notification system with inline actions"
+    },
+    {
+      "label": "Booking Validation Rules (activity player counts)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html_booking_rules",
+      "community": 0,
+      "norm_label": "booking validation rules (activity player counts)"
+    }
+  ],
+  "links": [
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_activity_reversal",
+      "target": "index_html_state_object"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_state_object",
+      "target": "index_html_firebase_cloud_sync"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_state_object",
+      "target": "index_html_fixed_schedules"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_state_object",
+      "target": "index_html_user_profiles"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_pin_login",
+      "target": "index_html_user_profiles"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_activity_reversal",
+      "target": "index_html_fixed_schedules"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_release_court_flow",
+      "target": "index_html_fixed_schedules"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_dashboard_kpis",
+      "target": "index_html_occupancy_analytics"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_data_export_system",
+      "target": "index_html_occupancy_analytics"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_internet_time_sync",
+      "target": "index_html_dashboard_kpis"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_booking_rules",
+      "target": "index_html_court_booking_flow"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_court_booking_flow",
+      "target": "index_html_firebase_cloud_sync"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_court_booking_flow",
+      "target": "index_html_waitlist_management"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_release_court_flow",
+      "target": "index_html_court_booking_flow"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_toast_notifications",
+      "target": "index_html_release_court_flow"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_3d_tennis_background",
+      "target": "index_html_glassmorphism_ui"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html_mobile_first_responsive",
+      "target": "index_html_glassmorphism_ui"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "court_lifecycle_flow",
+      "label": "Court Booking Lifecycle (Booking \u2192 Play \u2192 Release \u2192 History)",
+      "nodes": [
+        "index_html_court_booking_flow",
+        "index_html_waitlist_management",
+        "index_html_release_court_flow",
+        "index_html_activity_reversal",
+        "index_html_booking_rules",
+        "index_html_dashboard_kpis"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "index.html"
+    }
+  ],
+  "built_at_commit": "743cace8e623619601f1acf6355b44215250a129"
+}
