@@ -156,61 +156,96 @@ async function loadSettings() {
     return true;
 }
 
-// Só depende de `courtIdByName` já estar carregado (courts muda raramente,
-// então normalmente reaproveita o que já está em memória) — por isso criar,
-// mover, editar ou encerrar uma reserva não precisa tocar em sócios/quadras.
+function _sessionRowToLocal(s, rowPlayersSorted) {
+    const local = {
+        id: s.id,
+        court: s.court_id ? getCourtName(s.court_id) : null,
+        type: s.type || undefined,
+        activity: s.activity,
+        startTime: s.start_time,
+        endTime: s.end_time,
+        registrationTime: s.registration_time,
+        registrationDate: isoDateToPtBr(s.registration_date),
+        observation: s.observation,
+        repeat: s.repeat,
+        promotedFrom: s.promoted_from || undefined,
+        players: rowPlayersSorted.map(p => p.name_snapshot),
+        titles: rowPlayersSorted.map(p => p.title_snapshot || ''),
+        queuePosition: s.queue_position
+    };
+    if (s.status === 'history') {
+        local.date = isoDateToPtBr(s.history_date);
+        local.weekday = s.weekday;
+        local.playDuration = s.play_duration_min || 0;
+        local.waitDuration = s.wait_duration_min || 0;
+        local.tempoEsperaMin = s.wait_duration_min || 0;
+        local.totalJogadores = rowPlayersSorted.length;
+        local.periodoStr = getPeriodoStr(s.start_time);
+        local.encerradoPor = s.encerrado_por;
+    }
+    if (s.status === 'withdrawn') {
+        local.withdrawnAt = s.withdrawn_at;
+        local.withdrawnDate = isoDateToPtBr(s.withdrawn_date);
+    }
+    return local;
+}
+
+function _bucketSessionRows(rows, playersRows) {
+    const playersBySession = {};
+    (playersRows || []).forEach(p => {
+        (playersBySession[p.session_id] = playersBySession[p.session_id] || []).push(p);
+    });
+    const buckets = { court: [], waitlist: [], withdrawn: [], history: [] };
+    (rows || []).forEach(s => {
+        const rowPlayers = (playersBySession[s.id] || []).slice().sort((a, b) => a.position - b.position);
+        buckets[s.status].push(_sessionRowToLocal(s, rowPlayers));
+    });
+    buckets.waitlist.sort((a, b) => (a.queuePosition ?? 999999) - (b.queuePosition ?? 999999));
+    return buckets;
+}
+
+// Carga completa — inclui o histórico (só usado nos relatórios/dashboard,
+// não precisa ser instantâneo). Usada no login/F5, não no tempo real.
 async function loadSessions() {
     const [sessionsRes, playersRes] = await Promise.all([fetchAllRows('sessions'), fetchAllRows('session_players')]);
     if (sessionsRes.error || playersRes.error) {
         console.error('Erro ao carregar sessões do Supabase:', sessionsRes.error || playersRes.error);
         return false;
     }
-    const playersBySession = {};
-    (playersRes.data || []).forEach(p => {
-        (playersBySession[p.session_id] = playersBySession[p.session_id] || []).push(p);
-    });
-
-    const buckets = { court: [], waitlist: [], withdrawn: [], history: [] };
-    (sessionsRes.data || []).forEach(s => {
-        const rowPlayers = (playersBySession[s.id] || []).slice().sort((a, b) => a.position - b.position);
-        const local = {
-            id: s.id,
-            court: s.court_id ? getCourtName(s.court_id) : null,
-            type: s.type || undefined,
-            activity: s.activity,
-            startTime: s.start_time,
-            endTime: s.end_time,
-            registrationTime: s.registration_time,
-            registrationDate: isoDateToPtBr(s.registration_date),
-            observation: s.observation,
-            repeat: s.repeat,
-            promotedFrom: s.promoted_from || undefined,
-            players: rowPlayers.map(p => p.name_snapshot),
-            titles: rowPlayers.map(p => p.title_snapshot || ''),
-            queuePosition: s.queue_position
-        };
-        if (s.status === 'history') {
-            local.date = isoDateToPtBr(s.history_date);
-            local.weekday = s.weekday;
-            local.playDuration = s.play_duration_min || 0;
-            local.waitDuration = s.wait_duration_min || 0;
-            local.tempoEsperaMin = s.wait_duration_min || 0;
-            local.totalJogadores = rowPlayers.length;
-            local.periodoStr = getPeriodoStr(s.start_time);
-            local.encerradoPor = s.encerrado_por;
-        }
-        if (s.status === 'withdrawn') {
-            local.withdrawnAt = s.withdrawn_at;
-            local.withdrawnDate = isoDateToPtBr(s.withdrawn_date);
-        }
-        buckets[s.status].push(local);
-    });
-    buckets.waitlist.sort((a, b) => (a.queuePosition ?? 999999) - (b.queuePosition ?? 999999));
-
+    const buckets = _bucketSessionRows(sessionsRes.data, playersRes.data);
     state.bookings = buckets.court;
     state.waitlist = buckets.waitlist;
     state.withdrawals = buckets.withdrawn;
     state.history = buckets.history;
+    return true;
+}
+
+// Carga rápida para o tempo real: só quadras/fila/desistências (dezenas de
+// linhas), nunca o histórico (milhares). Isso é o que faz criar/mover/editar
+// uma reserva refletir quase instantâneo nos outros dispositivos — sem isso,
+// toda ação disparava uma busca no histórico inteiro. `state.history` só é
+// atualizado de novo no próximo login/F5 (aceitável para dados de relatório).
+async function loadActiveSessions() {
+    const sessionsRes = await fetchAllRows('sessions', q => q.neq('status', 'history'));
+    if (sessionsRes.error) {
+        console.error('Erro ao carregar sessões ativas do Supabase:', sessionsRes.error);
+        return false;
+    }
+    const activeIds = sessionsRes.data.map(s => s.id);
+    let playersData = [];
+    if (activeIds.length > 0) {
+        const playersRes = await supabaseClient.from('session_players').select('*').in('session_id', activeIds);
+        if (playersRes.error) {
+            console.error('Erro ao carregar jogadores das sessões ativas:', playersRes.error);
+            return false;
+        }
+        playersData = playersRes.data || [];
+    }
+    const buckets = _bucketSessionRows(sessionsRes.data, playersData);
+    state.bookings = buckets.court;
+    state.waitlist = buckets.waitlist;
+    state.withdrawals = buckets.withdrawn;
+    // state.history não é tocado aqui de propósito.
     return true;
 }
 
@@ -240,7 +275,9 @@ const _RELOAD_MAP = {
     members: ['members'], member_names: ['members'],
     club_settings: ['settings']
 };
-const _LOADERS = { sessions: loadSessions, courts: loadCourts, members: loadMembers, settings: loadSettings };
+// 'sessions' aqui usa loadActiveSessions (rápido, sem histórico) — a carga
+// completa com histórico só acontece no login/F5 via loadStateFromSupabase.
+const _LOADERS = { sessions: loadActiveSessions, courts: loadCourts, members: loadMembers, settings: loadSettings };
 
 async function loadStateIncremental(changedTable) {
     if (!supabaseClient || _isLoadingState) return;
