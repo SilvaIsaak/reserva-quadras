@@ -214,7 +214,17 @@ function startRealtimeSync() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, reload)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'member_names' }, reload)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'club_settings' }, reload)
-        .subscribe();
+        .subscribe((status, err) => {
+            // Sem isso, uma falha na inscrição de tempo real (canal fechado,
+            // erro de autenticação, timeout) ficava muda — parecia que o
+            // dispositivo só não estava recebendo as mudanças de outros.
+            console.log('[realtime] status:', status, err || '');
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                console.error('[realtime] falha ao inscrever:', err);
+                _realtimeChannel = null;
+                setTimeout(startRealtimeSync, 3000);
+            }
+        });
 }
 function stopRealtimeSync() {
     if (_realtimeChannel) { supabaseClient.removeChannel(_realtimeChannel); _realtimeChannel = null; }
