@@ -1,8 +1,5 @@
-// NÃO CONECTADO AO index.html — referência para modularização futura, ver prompt-reorganizacao-reservaquadras.md
-
-import { state } from './state.js';
-
-export function initTennis3D() {
+// Fundo animado 3D (three.js)
+function initTennis3D() {
     const canvas = document.getElementById('tennis-canvas');
     if (!canvas) return;
     const scene = new THREE.Scene();
@@ -22,6 +19,7 @@ export function initTennis3D() {
     const logoMaterial = new THREE.MeshBasicMaterial({ color: 0x6366f1, side: THREE.DoubleSide });
     const trophyMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1.0, roughness: 0.1 });
 
+    // Shared Geometries (Optimized)
     const geoBall = new THREE.SphereGeometry(1.2, state.settings.performanceMode ? 8 : 24, state.settings.performanceMode ? 8 : 24);
     const geoLine = new THREE.TorusGeometry(1.21, 0.04, 12, 60, Math.PI * 1.5);
     const geoRacketFrame = new THREE.TorusGeometry(3, 0.22, state.settings.performanceMode ? 8 : 16, state.settings.performanceMode ? 16 : 80);
@@ -136,3 +134,11 @@ export function initTennis3D() {
     window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
     animate();
 }
+
+try { initTennis3D(); } catch (e) { console.error("Erro na inicialização:", e); }
+
+// ============================================================
+// TAREFA F — Reversão de atividade encerrada
+// ============================================================
+
+/** @param {string} historyId - ID da entrada em state.history a reverter */

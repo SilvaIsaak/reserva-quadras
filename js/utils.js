@@ -1,96 +1,48 @@
-// NÃO CONECTADO AO index.html — referência para modularização futura, ver prompt-reorganizacao-reservaquadras.md
+// Helpers genéricos: modais, toasts, datas/horário, sincronização de horário via internet
+// --- Helper: abrir/fechar modais com display:flex garantido ---
+function showModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.style.display = 'flex';
+}
+function hideModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    el.style.display = '';
+}
 
-let _timeOffset = 0;
+// --- Safe LocalStorage Wrapper ---
 
-export function togglePwdVisibility(inputId, btn) {
-    const input = document.getElementById(inputId);
-    const icon = btn.querySelector('i');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'fas fa-eye-slash text-sm';
+
+// Mobile Menu Toggle
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    const isHidden = menu.classList.contains('hidden');
+    
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        setTimeout(() => menu.classList.add('open'), 10);
     } else {
-        input.type = 'password';
-        icon.className = 'fas fa-eye text-sm';
+        menu.classList.remove('open');
+        setTimeout(() => menu.classList.add('hidden'), 400);
     }
 }
 
-export function checkPwdMatch() {
-    const newPwd = document.getElementById('pwd-new').value;
-    const confirm = document.getElementById('pwd-confirm').value;
-    const msg = document.getElementById('pwd-match-msg');
-    const btn = document.getElementById('pwd-save-btn');
-
-    if (newPwd.length < 4) {
-        msg.textContent = 'Mínimo de 4 caracteres.';
-        msg.className = 'text-xs font-bold text-amber-400';
-        msg.classList.remove('hidden');
-        btn.disabled = true;
-        btn.classList.add('opacity-40');
-        return;
-    }
-    if (confirm.length === 0) {
-        msg.classList.add('hidden');
-        btn.disabled = true;
-        btn.classList.add('opacity-40');
-        return;
-    }
-    if (newPwd === confirm) {
-        msg.textContent = '✓ Senhas coincidem';
-        msg.className = 'text-xs font-bold text-emerald-400';
-        msg.classList.remove('hidden');
-        btn.disabled = false;
-        btn.classList.remove('opacity-40');
-    } else {
-        msg.textContent = '✗ Senhas não coincidem';
-        msg.className = 'text-xs font-bold text-red-400';
-        msg.classList.remove('hidden');
-        btn.disabled = true;
-        btn.classList.add('opacity-40');
-    }
-}
-
-export function getTodayDate() {
+// Funções auxiliares para datas dinâmicas
+function getTodayDate() {
     return getAccurateNow().toLocaleDateString('pt-BR');
 }
 
-export function getWeekdayName() {
+function getWeekdayName() {
     return getAccurateNow().toLocaleDateString('pt-BR', { weekday: 'long' });
 }
 
-export function calculateOverlapMinutes(start1, end1, start2, end2) {
-    const overlapStart = Math.max(start1, start2);
-    const overlapEnd = Math.min(end1, end2);
-    return overlapStart < overlapEnd ? Math.round((overlapEnd - overlapStart) / 60000) : 0;
-}
+// --- Agendas Fixas ---
+// Suporta days: [1,2,3,4,5] (Seg-Sex), [6] (Sábado), [0] (Domingo)
 
-export function timeToMinutes(timeStr) {
-    if (!timeStr) return 0;
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
-}
-
-const PERIODS = {
-    morning: { name: "Manhã", startHour: 6, startMinute: 30, endHour: 12, endMinute: 30, totalMinutes: 360 },
-    afternoon: { name: "Tarde", startHour: 12, startMinute: 31, endHour: 18, endMinute: 30, totalMinutes: 360 },
-    evening: { name: "Noite", startHour: 18, startMinute: 31, endHour: 22, endMinute: 0, totalMinutes: 210 }
-};
-
-export function formatHours(totalMinutes) {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${hours}h ${minutes}m`;
-}
-
-export function getPeriodoStr(timeStr) {
-    if (!timeStr) return '--';
-    const mins = timeToMinutes(timeStr);
-    if (mins >= PERIODS.morning.startHour * 60 + PERIODS.morning.startMinute && mins <= PERIODS.morning.endHour * 60 + PERIODS.morning.endMinute) return 'Manhã';
-    if (mins >= PERIODS.afternoon.startHour * 60 + PERIODS.afternoon.startMinute && mins <= PERIODS.afternoon.endHour * 60 + PERIODS.afternoon.endMinute) return 'Tarde';
-    if (mins >= PERIODS.evening.startHour * 60 + PERIODS.evening.startMinute && mins <= PERIODS.evening.endHour * 60 + PERIODS.evening.endMinute) return 'Noite';
-    return '--';
-}
-
-export function showToast(msg, type='info') {
+function showToast(msg, type='info') {
     const container = document.getElementById('toast-container');
     if(!container) return;
     const toast = document.createElement('div');
@@ -102,25 +54,139 @@ export function showToast(msg, type='info') {
     setTimeout(() => { gsap.to(toast, { x: 100, opacity: 0, duration: 0.5, onComplete: () => toast.remove() }); }, 4000);
 }
 
-export function showToastWithAction(msg, actionLabel, onAction) {
+// ============================================================
+// HORÁRIO VIA INTERNET (timeapi.io — fuso America/Sao_Paulo)
+// ============================================================
+let _timeOffset = 0; // diferença em ms entre servidor e Date.now()
+let _timeSynced = false;
+const _clockEl = () => document.getElementById('public-clock');
+const _syncIndicatorEl = () => document.getElementById('clock-sync-indicator');
+
+async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+// Cada fonte devolve o instante do servidor em ms desde epoch, medido entre t0 (antes do fetch)
+// e t1 (depois da resposta) para compensar a latência da requisição — ver getAccurateNow().
+// A Cloudflare vem primeiro: é a rede mais confiável das três (o endpoint de trace roda em
+// qualquer ponto de presença da CDN), enquanto timeapi.io e worldtimeapi.org já flagraram ficar
+// minutos fora do ar/desatualizados. Manter os dois como fallback ainda ajuda quando a Cloudflare
+// falhar, mas nenhuma fonte única de terceiros deve ser aceita sem essa cadeia de reserva.
+const TIME_SOURCES = [
+    {
+        label: 'Cloudflare',
+        async fetch() {
+            const res = await fetchWithTimeout('https://cloudflare.com/cdn-cgi/trace', { cache: 'no-store' });
+            if (!res.ok) throw new Error('cloudflare trace falhou');
+            const text = await res.text();
+            const match = text.match(/^ts=([\d.]+)/m);
+            if (!match) throw new Error('cloudflare trace sem ts');
+            return parseFloat(match[1]) * 1000;
+        },
+    },
+    {
+        label: 'timeapi.io',
+        async fetch() {
+            const res = await fetchWithTimeout('https://timeapi.io/api/time/current/zone?timeZone=America%2FSao_Paulo', { cache: 'no-store' });
+            if (!res.ok) throw new Error('timeapi falhou');
+            const data = await res.json();
+            return new Date(data.dateTime).getTime();
+        },
+    },
+    {
+        label: 'worldtimeapi.org (fallback)',
+        async fetch() {
+            const res = await fetchWithTimeout('https://worldtimeapi.org/api/timezone/America/Sao_Paulo', { cache: 'no-store' });
+            if (!res.ok) throw new Error('worldtimeapi falhou');
+            const data = await res.json();
+            return new Date(data.datetime).getTime();
+        },
+    },
+];
+
+async function syncInternetTime() {
+    for (const source of TIME_SOURCES) {
+        try {
+            const t0 = Date.now();
+            const serverMs = await source.fetch();
+            const t1 = Date.now();
+            _timeOffset = serverMs - (t0 + t1) / 2;
+            _timeSynced = true;
+            if (_syncIndicatorEl()) {
+                _syncIndicatorEl().title = `Horário sincronizado (${source.label})`;
+                _syncIndicatorEl().classList.replace('text-gray-500','text-emerald-400');
+            }
+            return;
+        } catch(e) {
+            console.warn(`[Clock] Falha ao sincronizar via ${source.label}.`, e);
+        }
+    }
+    _timeSynced = false;
+    if (_syncIndicatorEl()) {
+        _syncIndicatorEl().title = 'Sem sincronização — usando relógio local';
+        _syncIndicatorEl().classList.replace('text-emerald-400','text-gray-500');
+    }
+    console.warn('[Clock] Todas as fontes de horário falharam. Usando relógio local.');
+}
+
+function getAccurateNow() {
+    return new Date(Date.now() + _timeOffset);
+}
+
+// Sincronizar imediatamente e depois a cada 10 minutos
+
+function getPeriodoStr(timeStr) {
+    if (!timeStr) return '--';
+    const mins = timeToMinutes(timeStr);
+    if (mins >= PERIODS.morning.startHour * 60 + PERIODS.morning.startMinute && mins <= PERIODS.morning.endHour * 60 + PERIODS.morning.endMinute) return 'Manhã';
+    if (mins >= PERIODS.afternoon.startHour * 60 + PERIODS.afternoon.startMinute && mins <= PERIODS.afternoon.endHour * 60 + PERIODS.afternoon.endMinute) return 'Tarde';
+    if (mins >= PERIODS.evening.startHour * 60 + PERIODS.evening.startMinute && mins <= PERIODS.evening.endHour * 60 + PERIODS.evening.endMinute) return 'Noite';
+    return '--';
+}
+
+/** G.3: Novos KPIs no Dashboard Home (versão única) */
+
+/** G.1: releaseCourt aprimorado — encerradoPor e applyFixedSchedules já integrados na versão final abaixo */
+
+/** G.2: exportDashboardData com novas colunas */
+
+function showToastWithAction(msg, actionLabel, onAction) {
     const container = document.getElementById('toast-container');
     if (!container) return;
-    const id = 'toast-action-' + Date.now();
     const div = document.createElement('div');
-    div.id = id;
     div.className = 'glass-card px-5 py-4 rounded-2xl shadow-xl border border-white/10 flex items-center gap-4 max-w-sm w-full bg-indigo-500/10';
+    // O callback é ligado por addEventListener, não serializado no onclick.
+    // A versão anterior usava `onAction.toString()`, o que reexecutava a função
+    // fora do escopo original: as variáveis capturadas (nextGroup, court) não
+    // existiam mais e o botão falhava com ReferenceError.
     div.innerHTML = `
         <span class="flex-1 text-sm font-bold text-white">${msg}</span>
-        <button onclick="(${onAction.toString()})(); document.getElementById('${id}')?.remove();" 
+        <button data-role="confirm"
             class="shrink-0 px-4 py-2 rounded-xl bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest hover:brightness-110 transition-all">
             ${actionLabel}
         </button>
-        <button onclick="document.getElementById('${id}')?.remove();" class="shrink-0 text-gray-500 hover:text-white text-lg leading-none">&times;</button>
+        <button data-role="dismiss" class="shrink-0 text-gray-500 hover:text-white text-lg leading-none">&times;</button>
     `;
+    let timer = null;
+    const close = () => { if (timer) clearTimeout(timer); div.remove(); };
+    div.querySelector('[data-role="confirm"]').addEventListener('click', () => {
+        try {
+            onAction();
+        } catch (e) {
+            console.error('Erro ao executar ação do toast:', e);
+            showToast('Não foi possível concluir a ação.', 'error');
+        }
+        close();
+    });
+    div.querySelector('[data-role="dismiss"]').addEventListener('click', close);
     container.appendChild(div);
-    setTimeout(() => div.remove(), 12000);
+    timer = setTimeout(close, 12000);
 }
 
-export function getAccurateNow() {
-    return new Date(Date.now() + _timeOffset);
-}
+// Substituir releaseCourt pelo novo fluxo com modal de opção para aulas
