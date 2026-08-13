@@ -82,20 +82,33 @@ function setConnectionState(online) {
 // silêncio entre uma página e outra (o "só aparece 1 jogador" era exatamente
 // isso). `id` é único por linha, então ordenar por ele sempre garante uma
 // ordem estável e cobertura completa.
+// Busca a 1ª página já pedindo a contagem total, depois dispara todas as
+// páginas restantes em paralelo (em vez de uma de cada vez) — como isso
+// roda a cada reconexão em tempo real, buscar página por página em série
+// deixava qualquer atualização visivelmente lenta com milhares de linhas.
 async function fetchAllRows(table, applyQuery) {
     const pageSize = 1000;
-    let all = [];
-    let offset = 0;
-    while (true) {
-        let q = supabaseClient.from(table).select('*');
+    const buildQuery = (withCount) => {
+        let q = supabaseClient.from(table).select('*', withCount ? { count: 'exact' } : undefined);
         if (applyQuery) q = applyQuery(q);
-        const { data, error } = await q.order('id').range(offset, offset + pageSize - 1);
-        if (error) return { data: null, error };
-        all = all.concat(data || []);
-        if (!data || data.length < pageSize) break;
-        offset += pageSize;
+        return q.order('id');
+    };
+    const first = await buildQuery(true).range(0, pageSize - 1);
+    if (first.error) return { data: null, error: first.error };
+    const total = first.count ?? first.data.length;
+    if (!first.data || first.data.length < pageSize || total <= pageSize) {
+        return { data: first.data || [], error: null };
     }
-    return { data: all, error: null };
+    const pageCount = Math.ceil(total / pageSize);
+    const rest = await Promise.all(
+        Array.from({ length: pageCount - 1 }, (_, i) => {
+            const p = i + 1;
+            return buildQuery(false).range(p * pageSize, p * pageSize + pageSize - 1);
+        })
+    );
+    const failed = rest.find(r => r.error);
+    if (failed) return { data: null, error: failed.error };
+    return { data: first.data.concat(...rest.map(r => r.data || [])), error: null };
 }
 
 async function loadStateFromSupabase() {
