@@ -111,102 +111,116 @@ async function fetchAllRows(table, applyQuery) {
     return { data: first.data.concat(...rest.map(r => r.data || [])), error: null };
 }
 
+// Cada load* busca só a tabela que muda com aquele tipo de evento — recarregar
+// as 6 tabelas inteiras (incluindo os ~1400 sócios) a cada reserva criada era
+// o principal motivo do delay "não instantâneo" no tempo real.
+async function loadCourts() {
+    const res = await supabaseClient.from('courts').select('*').order('sort_order');
+    if (res.error) { console.error('Erro ao carregar "courts" do Supabase:', res.error); return false; }
+    courtIdByName = {};
+    (res.data || []).forEach(c => { courtIdByName[c.name] = c.id; });
+    state.courts = (res.data || []).map(c => c.name);
+    return true;
+}
+
+async function loadMembers() {
+    const [membersRes, namesRes] = await Promise.all([fetchAllRows('members'), fetchAllRows('member_names')]);
+    if (membersRes.error || namesRes.error) {
+        console.error('Erro ao carregar sócios do Supabase:', membersRes.error || namesRes.error);
+        return false;
+    }
+    memberIdByTitle = {};
+    const namesByMember = {};
+    (namesRes.data || []).forEach(n => {
+        (namesByMember[n.member_id] = namesByMember[n.member_id] || []).push(n.name);
+    });
+    const newMembers = {};
+    (membersRes.data || []).forEach(m => {
+        memberIdByTitle[m.membership_number] = m.id;
+        newMembers[m.membership_number] = namesByMember[m.id] || [];
+    });
+    state.members = newMembers;
+    return true;
+}
+
+async function loadSettings() {
+    const res = await supabaseClient.from('club_settings').select('*').eq('id', 1).single();
+    if (res.error) { console.error('Erro ao carregar "club_settings" do Supabase:', res.error); return false; }
+    if (res.data) {
+        state.settings.clubName = res.data.club_name;
+        state.settings.primaryColor = res.data.primary_color;
+        state.settings.theme = res.data.theme;
+        state.settings.performanceMode = res.data.performance_mode;
+        state.manuallyReleasedLessons = res.data.manually_released_lessons || [];
+    }
+    return true;
+}
+
+// Só depende de `courtIdByName` já estar carregado (courts muda raramente,
+// então normalmente reaproveita o que já está em memória) — por isso criar,
+// mover, editar ou encerrar uma reserva não precisa tocar em sócios/quadras.
+async function loadSessions() {
+    const [sessionsRes, playersRes] = await Promise.all([fetchAllRows('sessions'), fetchAllRows('session_players')]);
+    if (sessionsRes.error || playersRes.error) {
+        console.error('Erro ao carregar sessões do Supabase:', sessionsRes.error || playersRes.error);
+        return false;
+    }
+    const playersBySession = {};
+    (playersRes.data || []).forEach(p => {
+        (playersBySession[p.session_id] = playersBySession[p.session_id] || []).push(p);
+    });
+
+    const buckets = { court: [], waitlist: [], withdrawn: [], history: [] };
+    (sessionsRes.data || []).forEach(s => {
+        const rowPlayers = (playersBySession[s.id] || []).slice().sort((a, b) => a.position - b.position);
+        const local = {
+            id: s.id,
+            court: s.court_id ? getCourtName(s.court_id) : null,
+            type: s.type || undefined,
+            activity: s.activity,
+            startTime: s.start_time,
+            endTime: s.end_time,
+            registrationTime: s.registration_time,
+            registrationDate: isoDateToPtBr(s.registration_date),
+            observation: s.observation,
+            repeat: s.repeat,
+            promotedFrom: s.promoted_from || undefined,
+            players: rowPlayers.map(p => p.name_snapshot),
+            titles: rowPlayers.map(p => p.title_snapshot || ''),
+            queuePosition: s.queue_position
+        };
+        if (s.status === 'history') {
+            local.date = isoDateToPtBr(s.history_date);
+            local.weekday = s.weekday;
+            local.playDuration = s.play_duration_min || 0;
+            local.waitDuration = s.wait_duration_min || 0;
+            local.tempoEsperaMin = s.wait_duration_min || 0;
+            local.totalJogadores = rowPlayers.length;
+            local.periodoStr = getPeriodoStr(s.start_time);
+            local.encerradoPor = s.encerrado_por;
+        }
+        if (s.status === 'withdrawn') {
+            local.withdrawnAt = s.withdrawn_at;
+            local.withdrawnDate = isoDateToPtBr(s.withdrawn_date);
+        }
+        buckets[s.status].push(local);
+    });
+    buckets.waitlist.sort((a, b) => (a.queuePosition ?? 999999) - (b.queuePosition ?? 999999));
+
+    state.bookings = buckets.court;
+    state.waitlist = buckets.waitlist;
+    state.withdrawals = buckets.withdrawn;
+    state.history = buckets.history;
+    return true;
+}
+
+// --- Carga completa (login, F5, reconexão) — busca as 4 fontes em paralelo.
 async function loadStateFromSupabase() {
     if (!supabaseClient || _isLoadingState) return;
     _isLoadingState = true;
     try {
-        const [courtsRes, sessionsRes, playersRes, membersRes, namesRes, settingsRes] = await Promise.all([
-            supabaseClient.from('courts').select('*').order('sort_order'),
-            fetchAllRows('sessions'),
-            fetchAllRows('session_players', q => q.order('position')),
-            fetchAllRows('members'),
-            fetchAllRows('member_names'),
-            supabaseClient.from('club_settings').select('*').eq('id', 1).single()
-        ]);
-        // Antes só `courtsRes.error` era checado — se sessions/members/etc
-        // falhassem (RLS, rede, etc.) o erro ficava invisível e o dashboard
-        // simplesmente mostrava tudo zerado, sem pista nenhuma no console.
-        const labeled = [
-            ['courts', courtsRes], ['sessions', sessionsRes], ['session_players', playersRes],
-            ['members', membersRes], ['member_names', namesRes], ['club_settings', settingsRes]
-        ];
-        const failed = labeled.filter(([, res]) => res.error);
-        if (failed.length > 0) {
-            failed.forEach(([name, res]) => console.error(`Erro ao carregar "${name}" do Supabase:`, res.error));
-            throw failed[0][1].error;
-        }
-
-        courtIdByName = {};
-        (courtsRes.data || []).forEach(c => { courtIdByName[c.name] = c.id; });
-        state.courts = (courtsRes.data || []).map(c => c.name);
-
-        const playersBySession = {};
-        (playersRes.data || []).forEach(p => {
-            (playersBySession[p.session_id] = playersBySession[p.session_id] || []).push(p);
-        });
-
-        memberIdByTitle = {};
-        const namesByMember = {};
-        (namesRes.data || []).forEach(n => {
-            (namesByMember[n.member_id] = namesByMember[n.member_id] || []).push(n.name);
-        });
-        const newMembers = {};
-        (membersRes.data || []).forEach(m => {
-            memberIdByTitle[m.membership_number] = m.id;
-            newMembers[m.membership_number] = namesByMember[m.id] || [];
-        });
-        state.members = newMembers;
-
-        const buckets = { court: [], waitlist: [], withdrawn: [], history: [] };
-        (sessionsRes.data || []).forEach(s => {
-            const rowPlayers = playersBySession[s.id] || [];
-            const local = {
-                id: s.id,
-                court: s.court_id ? getCourtName(s.court_id) : null,
-                type: s.type || undefined,
-                activity: s.activity,
-                startTime: s.start_time,
-                endTime: s.end_time,
-                registrationTime: s.registration_time,
-                registrationDate: isoDateToPtBr(s.registration_date),
-                observation: s.observation,
-                repeat: s.repeat,
-                promotedFrom: s.promoted_from || undefined,
-                players: rowPlayers.map(p => p.name_snapshot),
-                titles: rowPlayers.map(p => p.title_snapshot || ''),
-                queuePosition: s.queue_position
-            };
-            if (s.status === 'history') {
-                local.date = isoDateToPtBr(s.history_date);
-                local.weekday = s.weekday;
-                local.playDuration = s.play_duration_min || 0;
-                local.waitDuration = s.wait_duration_min || 0;
-                local.tempoEsperaMin = s.wait_duration_min || 0;
-                local.totalJogadores = rowPlayers.length;
-                local.periodoStr = getPeriodoStr(s.start_time);
-                local.encerradoPor = s.encerrado_por;
-            }
-            if (s.status === 'withdrawn') {
-                local.withdrawnAt = s.withdrawn_at;
-                local.withdrawnDate = isoDateToPtBr(s.withdrawn_date);
-            }
-            buckets[s.status].push(local);
-        });
-        buckets.waitlist.sort((a, b) => (a.queuePosition ?? 999999) - (b.queuePosition ?? 999999));
-
-        state.bookings = buckets.court;
-        state.waitlist = buckets.waitlist;
-        state.withdrawals = buckets.withdrawn;
-        state.history = buckets.history;
-
-        if (settingsRes.data) {
-            state.settings.clubName = settingsRes.data.club_name;
-            state.settings.primaryColor = settingsRes.data.primary_color;
-            state.settings.theme = settingsRes.data.theme;
-            state.settings.performanceMode = settingsRes.data.performance_mode;
-            state.manuallyReleasedLessons = settingsRes.data.manually_released_lessons || [];
-        }
-
+        const [ok1, ok2, ok3, ok4] = await Promise.all([loadCourts(), loadSessions(), loadMembers(), loadSettings()]);
+        if (!ok1 || !ok2 || !ok3 || !ok4) throw new Error('Uma ou mais tabelas falharam ao carregar (ver erros acima).');
         saveLocal();
         render();
         setConnectionState(true);
@@ -219,22 +233,54 @@ async function loadStateFromSupabase() {
     }
 }
 
-// --- Realtime (staff autenticado): qualquer mudança em qualquer tabela de
-// negócio recarrega tudo — nunca um merge parcial local.
+// --- Carga seletiva (tempo real) — só busca a(s) tabela(s) que mudou.
+const _RELOAD_MAP = {
+    sessions: ['sessions'], session_players: ['sessions'],
+    courts: ['courts', 'sessions'], // court_id -> nome muda, sessions precisa recalcular
+    members: ['members'], member_names: ['members'],
+    club_settings: ['settings']
+};
+const _LOADERS = { sessions: loadSessions, courts: loadCourts, members: loadMembers, settings: loadSettings };
+
+async function loadStateIncremental(changedTable) {
+    if (!supabaseClient || _isLoadingState) return;
+    _isLoadingState = true;
+    try {
+        const parts = _RELOAD_MAP[changedTable] || [];
+        const results = await Promise.all(parts.map(p => _LOADERS[p]()));
+        if (results.some(ok => !ok)) throw new Error(`Falha ao atualizar "${changedTable}" (ver erros acima).`);
+        saveLocal();
+        render();
+        setConnectionState(true);
+    } catch (err) {
+        console.error("Erro ao sincronizar em tempo real:", err);
+        setConnectionState(false);
+    } finally {
+        _isLoadingState = false;
+    }
+}
+
+// --- Realtime (staff autenticado): qualquer mudança recarrega só a fonte
+// afetada — nunca um merge parcial local (o servidor decide o resultado).
 function startRealtimeSync() {
     if (!supabaseClient || _realtimeChannel) return;
-    let debounceTimer = null;
-    const reload = () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(loadStateFromSupabase, 250);
+    const timers = {};
+    // sessions e session_players quase sempre mudam juntos (criar uma reserva
+    // grava a sessão e os jogadores em seguida) e os dois recarregam a mesma
+    // coisa (loadSessions) — normalizar pra uma chave só evita disparar duas
+    // vezes para a mesma ação.
+    const scheduleReload = (table) => {
+        const key = table === 'session_players' ? 'sessions' : table;
+        clearTimeout(timers[key]);
+        timers[key] = setTimeout(() => loadStateIncremental(key), 80);
     };
     _realtimeChannel = supabaseClient.channel('rq_business_tables')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, reload)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'session_players' }, reload)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'courts' }, reload)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, reload)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'member_names' }, reload)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'club_settings' }, reload)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => scheduleReload('sessions'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'session_players' }, () => scheduleReload('session_players'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'courts' }, () => scheduleReload('courts'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => scheduleReload('members'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'member_names' }, () => scheduleReload('member_names'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'club_settings' }, () => scheduleReload('club_settings'))
         .subscribe((status, err) => {
             // Sem isso, uma falha na inscrição de tempo real (canal fechado,
             // erro de autenticação, timeout) ficava muda — parecia que o
