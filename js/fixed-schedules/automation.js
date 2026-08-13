@@ -1,30 +1,41 @@
 // Motor da agenda fixa de aulas: aplicar status automático e liberar quadra manualmente
-function getFixedStatus(courtName) {
-    const now = new Date();
+// Único ponto que percorre FIXED_SCHEDULES para achar o período ativo agora —
+// reaproveitado por getFixedStatus, applyFixedSchedules e releaseLessonUntilPeriodEnd.
+// Antes havia uma segunda cópia dessa busca dentro de applyFixedSchedules que não
+// tratava períodos que cruzam a meia-noite, fazendo o startTime da aula cair
+// incorretamente em "00:00" nesse caso.
+function getActiveScheduleFor(courtName) {
+    const now = getAccurateNow();
     const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    
+
     const schedules = FIXED_SCHEDULES[courtName];
     if (!schedules) return null;
-    
+
     for (const schedule of schedules) {
         if (schedule.days.includes(dayOfWeek)) {
             const startMinutes = timeToMinutes(schedule.start);
             const endMinutes = timeToMinutes(schedule.end);
-            
+
             if (endMinutes > startMinutes) {
                 if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
-                    return schedule.status;
+                    return schedule;
                 }
             } else {
                 if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
-                    return schedule.status;
+                    return schedule;
                 }
             }
         }
     }
-    
-    return "free";
+
+    return null;
+}
+
+function getFixedStatus(courtName) {
+    if (!FIXED_SCHEDULES[courtName]) return null;
+    const schedule = getActiveScheduleFor(courtName);
+    return schedule ? schedule.status : "free";
 }
 
 
@@ -51,7 +62,11 @@ function closeReleaseLessonModal() {
 /** Libera até o fim do período atual (comportamento padrão antigo) */
 function releaseLessonUntilPeriodEnd() {
     if (!_releaseLessonCourtPending) return;
-    _doReleaseCourt(_releaseLessonCourtPending, null);
+    // Sem `until` explícito, applyFixedSchedules nunca reassumia o controle da
+    // quadra (a liberação ficava valendo o dia inteiro) — calcular o fim do
+    // período ativo agora e gravá-lo como `until` corrige isso.
+    const activeSchedule = getActiveScheduleFor(_releaseLessonCourtPending);
+    _doReleaseCourt(_releaseLessonCourtPending, activeSchedule ? activeSchedule.end : null);
     closeReleaseLessonModal();
 }
 
@@ -73,7 +88,7 @@ function releaseLessonUntilTime() {
 function _doReleaseCourt(court, until) {
     const booking = state.bookings.find(b => b.court === court);
     if (!booking) return;
-    const now = new Date(), endTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const now = getAccurateNow(), endTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const todayDate = now.toLocaleDateString('pt-BR');
 
     let playDuration = 0;
@@ -191,10 +206,10 @@ function applyFixedSchedules() {
     if (lastDateForReset !== todayDate) {
         state.manuallyReleasedLessons = [];
         storage.set('last_reset_date', todayDate);
+        dbSaveSettings({ manuallyReleasedLessons: state.manuallyReleasedLessons });
     }
 
-    const now = new Date();
-    const dayOfWeek = now.getDay();
+    const now = getAccurateNow();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     let manualReleasesChanged = false;
 
@@ -241,18 +256,7 @@ function applyFixedSchedules() {
         if (fixedStatus === "lesson" && (!existingBooking || existingBooking.type !== "lesson")) {
             if (existingBooking) continue;
 
-            let currentPeriod = null;
-            if (FIXED_SCHEDULES[courtName]) {
-                for (const schedule of FIXED_SCHEDULES[courtName]) {
-                    if (schedule.days.includes(dayOfWeek)) {
-                        const startMinutes = timeToMinutes(schedule.start);
-                        const endMinutes = timeToMinutes(schedule.end);
-                        if (endMinutes > startMinutes && currentMinutes >= startMinutes && currentMinutes < endMinutes) {
-                            currentPeriod = schedule; break;
-                        }
-                    }
-                }
-            }
+            const currentPeriod = getActiveScheduleFor(courtName);
             const lessonBooking = {
                 id: Date.now() + Math.random(), court: courtName, type: "lesson",
                 players: ["AULA"], startTime: currentPeriod ? currentPeriod.start : "00:00",
@@ -285,11 +289,7 @@ function applyFixedSchedules() {
         }
     }
     if (manualReleasesChanged) dbSaveSettings({ manuallyReleasedLessons: state.manuallyReleasedLessons });
-    if (_stateSignature() !== _sigBefore) {
-        saveLocal();
-    } else {
-        saveLocal();
-    }
+    if (_stateSignature() !== _sigBefore) saveLocal();
 }
 
 // H.4: Calcular próxima transição de quadra
@@ -299,7 +299,7 @@ function applyFixedSchedules() {
  * @returns {{ label: string, color: string } | null}
  */
 function getNextTransition(courtName) {
-    const now = new Date();
+    const now = getAccurateNow();
     const dayOfWeek = now.getDay();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const schedules = FIXED_SCHEDULES[courtName];

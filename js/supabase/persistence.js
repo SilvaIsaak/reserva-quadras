@@ -344,6 +344,7 @@ async function loadPublicState() {
             supabaseClient.from('v_public_courts').select('*'),
             supabaseClient.from('v_public_waitlist').select('*')
         ]);
+        if (viewRes.error || waitRes.error) throw viewRes.error || waitRes.error;
         // v_public_courts já traz todas as quadras (mesmo livres), na ordem
         // certa — não precisa (e o perfil publico não tem acesso) à tabela
         // courts diretamente.
@@ -382,12 +383,16 @@ function _showSyncError(err) {
 }
 
 async function _syncSessionPlayers(sessionId, players, titles) {
-    await supabaseClient.from('session_players').delete().eq('session_id', sessionId);
+    const { error: delError } = await supabaseClient.from('session_players').delete().eq('session_id', sessionId);
+    if (delError) throw delError;
     const rows = (players || []).map((name, i) => ({
         session_id: sessionId, name_snapshot: name, title_snapshot: (titles && titles[i]) || null,
         member_id: (titles && memberIdByTitle[titles[i]]) || null, position: i
     }));
-    if (rows.length > 0) await supabaseClient.from('session_players').insert(rows);
+    if (rows.length > 0) {
+        const { error: insError } = await supabaseClient.from('session_players').insert(rows);
+        if (insError) throw insError;
+    }
 }
 
 function _localToSessionRow(local, status) {
@@ -489,9 +494,13 @@ async function dbUpsertMember(title, names) {
             memberId = data.id;
             memberIdByTitle[title] = memberId;
         }
-        await supabaseClient.from('member_names').delete().eq('member_id', memberId);
+        const { error: delError } = await supabaseClient.from('member_names').delete().eq('member_id', memberId);
+        if (delError) throw delError;
         const rows = (names || []).map(name => ({ member_id: memberId, name }));
-        if (rows.length > 0) await supabaseClient.from('member_names').insert(rows);
+        if (rows.length > 0) {
+            const { error: insError } = await supabaseClient.from('member_names').insert(rows);
+            if (insError) throw insError;
+        }
     } catch (err) { _showSyncError(err); }
 }
 
@@ -515,7 +524,8 @@ async function dbSyncMembersFull(membersObj) {
         for (const [title, names] of Object.entries(membersObj || {})) {
             await dbUpsertMember(title, Array.isArray(names) ? names : [names]);
         }
-    } catch (err) { _showSyncError(err); }
+        return true;
+    } catch (err) { _showSyncError(err); return false; }
 }
 
 // Sincroniza a lista de quadras com o texto livre editado em Configurações.
@@ -524,19 +534,22 @@ async function dbSyncCourts(names) {
         const existing = Object.keys(courtIdByName);
         const toRemove = existing.filter(n => !names.includes(n));
         for (const name of toRemove) {
-            await supabaseClient.from('courts').delete().eq('id', courtIdByName[name]);
+            const { error } = await supabaseClient.from('courts').delete().eq('id', courtIdByName[name]);
+            if (error) throw error;
             delete courtIdByName[name];
         }
         for (let i = 0; i < names.length; i++) {
             if (courtIdByName[names[i]]) {
-                await supabaseClient.from('courts').update({ sort_order: i }).eq('id', courtIdByName[names[i]]);
+                const { error } = await supabaseClient.from('courts').update({ sort_order: i }).eq('id', courtIdByName[names[i]]);
+                if (error) throw error;
             } else {
                 const { data, error } = await supabaseClient.from('courts').insert({ name: names[i], sort_order: i }).select('id').single();
                 if (error) throw error;
                 courtIdByName[names[i]] = data.id;
             }
         }
-    } catch (err) { _showSyncError(err); }
+        return true;
+    } catch (err) { _showSyncError(err); return false; }
 }
 
 async function dbSaveSettings(patch) {
@@ -549,7 +562,8 @@ async function dbSaveSettings(patch) {
         if ('manuallyReleasedLessons' in patch) row.manually_released_lessons = patch.manuallyReleasedLessons;
         const { error } = await supabaseClient.from('club_settings').update(row).eq('id', 1);
         if (error) throw error;
-    } catch (err) { _showSyncError(err); }
+        return true;
+    } catch (err) { _showSyncError(err); return false; }
 }
 
 // Substitui TODOS os dados — usado só pela importação de backup completo via

@@ -2,7 +2,7 @@
 function exportFullSystemData() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 4));
     const link = document.createElement('a');
-    link.setAttribute("href", dataStr); link.setAttribute("download", `backup_sistema_quadras_${new Date().toISOString().split('T')[0]}.json`);
+    link.setAttribute("href", dataStr); link.setAttribute("download", `backup_sistema_quadras_${localDateStamp()}.json`);
     document.body.appendChild(link); link.click(); link.remove();
     showToast("Backup do sistema concluído!", "success");
 }
@@ -49,6 +49,24 @@ function timeToMinutes(timeStr) {
     if (!timeStr) return 0;
     const [h, m] = timeStr.split(':').map(Number);
     return h * 60 + m;
+}
+
+// Data local (aaaa-mm-dd) para nome de arquivo exportado. `toISOString()`
+// converte para UTC — entre 21h e 23h59 em Brasília (UTC-3) isso gera um
+// arquivo com a data de amanhã.
+function localDateStamp() {
+    return getAccurateNow().toLocaleDateString('sv-SE');
+}
+
+// Campos de texto livre (observação, nomes) podem conter o próprio separador,
+// aspas ou quebra de linha — sem isso, uma observação como "atrasado; trocou
+// de quadra" desalinha todas as colunas à direita só naquela linha do CSV.
+function csvField(v, sep) {
+    const s = String(v ?? '');
+    if (s.includes(sep) || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
 }
 
 function parseDate(dateStr) {
@@ -252,12 +270,12 @@ function exportOccupancyByCourt() {
         court.periods.evening.occupiedMinutes
     ]);
     
-    const csvContent = [headers, ...rows].map(e => e.join(sep)).join("\n");
+    const csvContent = [headers, ...rows].map(e => e.map(v => csvField(v, sep)).join(sep)).join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `ocupacao_por_quadra_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `ocupacao_por_quadra_${localDateStamp()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -278,12 +296,12 @@ function exportOccupancyHourly() {
         ...Array.from({ length: 24 }, (_, hour) => analytics.hourlyUsage[hour]?.[court.courtName] || 0)
     ]);
     
-    const csvContent = [headers, ...rows].map(e => e.join(sep)).join("\n");
+    const csvContent = [headers, ...rows].map(e => e.map(v => csvField(v, sep)).join(sep)).join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `uso_por_hora_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `uso_por_hora_${localDateStamp()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -327,12 +345,12 @@ function exportOccupancySummary() {
             .map((court, index) => [`${index + 1}. ${court.courtName}`, formatHours(court.totalPlayMinutes)])
     ];
     
-    const csvContent = content.map(e => e.join(sep)).join("\n");
+    const csvContent = content.map(e => e.map(v => csvField(v, sep)).join(sep)).join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `resumo_ocupacao_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `resumo_ocupacao_${localDateStamp()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -365,12 +383,12 @@ function exportOccupancyByActivity() {
             totalMinutes > 0 ? ((data.totalMinutes / totalMinutes) * 100).toFixed(2) : "0.00"
         ]);
     
-    const csvContent = [headers, ...rows].map(e => e.join(sep)).join("\n");
+    const csvContent = [headers, ...rows].map(e => e.map(v => csvField(v, sep)).join(sep)).join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `ocupacao_por_atividade_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `ocupacao_por_atividade_${localDateStamp()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -425,13 +443,13 @@ function renderPublic() {
             else if(b.type === 'lesson') { bgClass = "status-lesson"; statusLabel = "AULA"; players = "QUADRA EM AULA"; statusColor = "bg-white/20 text-white"; }
             else if(b.type === 'rain') { bgClass = "status-rain"; statusLabel = "CHUVA"; players = "QUADRA MOLHADA"; statusColor = "bg-white/20 text-white"; }
             else if(b.type === 'tournament') { bgClass = "status-tournament"; statusLabel = "TORNEIO"; players = "COMPETIÇÃO ATIVA"; statusColor = "bg-white/20 text-white"; }
-            else { bgClass = "bg-indigo-500/10"; statusLabel = "OCUPADA"; players = b.players.map(p => `<div class="truncate border-b border-white/5 pb-1 last:border-0">${p}</div>`).join(''); statusColor = "bg-indigo-500/20 text-indigo-300"; }
+            else { bgClass = "bg-indigo-500/10"; statusLabel = "OCUPADA"; players = b.players.map(p => `<div class="truncate border-b border-white/5 pb-1 last:border-0">${escapeHtml(p)}</div>`).join(''); statusColor = "bg-indigo-500/20 text-indigo-300"; }
         }
         
         return `
             <div class="glass-card p-6 rounded-2xl flex flex-col justify-between relative overflow-hidden ${b ? 'border-indigo-500/20' : 'border-white/5'} ${bgClass} shadow-lg">
                 <div class="flex justify-between items-center mb-4">
-                    <h4 class="text-xl font-bold text-white">${c}</h4>
+                    <h4 class="text-xl font-bold text-white">${escapeHtml(c)}</h4>
                     <span class="px-3 py-1 rounded-lg text-[10px] font-bold tracking-widest uppercase ${statusColor}">${statusLabel}</span>
                 </div>
                 
@@ -439,7 +457,7 @@ function renderPublic() {
                     <div class="mb-4">
                         <span class="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-gray-300 uppercase tracking-widest inline-flex items-center">
                             <i class="fas fa-play-circle mr-2 text-indigo-400"></i>
-                            ${b && !b.type ? b.activity : 'Status'}
+                            ${b && !b.type ? escapeHtml(b.activity) : 'Status'}
                         </span>
                     </div>
                     <div class="text-lg font-bold text-white leading-tight space-y-1">${players}</div>
@@ -460,7 +478,7 @@ function renderPublic() {
                             ` : ''}
                         </div>
                     ` : ''}
-                    ${b && b.observation ? `<p class="text-xs font-medium text-gray-300 border-l-2 border-indigo-400 pl-3 py-1 bg-white/5 rounded-r-lg italic mt-3">${b.observation}</p>` : ''}
+                    ${b && b.observation ? `<p class="text-xs font-medium text-gray-300 border-l-2 border-indigo-400 pl-3 py-1 bg-white/5 rounded-r-lg italic mt-3">${escapeHtml(b.observation)}</p>` : ''}
                     ${!b ? '<div class="h-1 bg-emerald-500/10 rounded-full overflow-hidden mt-4"><div class="w-full h-full bg-emerald-400/50"></div></div>' : ''}
                 </div>
             </div>`;
@@ -478,11 +496,11 @@ function renderPublic() {
             <div class="flex-1 mb-4">
                 <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Jogadores</p>
                 <div class="text-sm font-bold text-white leading-tight space-y-1">
-                    ${item.players.map(p => `<div class="truncate border-b border-white/5 pb-0.5 last:border-0">${p}</div>`).join('')}
+                    ${item.players.map(p => `<div class="truncate border-b border-white/5 pb-0.5 last:border-0">${escapeHtml(p)}</div>`).join('')}
                 </div>
             </div>
             <div class="pt-3 border-t border-white/5">
-                <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">${item.activity}</p>
+                <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">${escapeHtml(item.activity)}</p>
             </div>
         </div>`).join('') || '<div class="col-span-full"><p class="text-center text-gray-500 font-medium py-12 text-lg uppercase tracking-widest opacity-40">Fila de Espera Vazia</p></div>';
 }
@@ -720,7 +738,7 @@ function renderPublicAnalytics() {
             actBar.innerHTML = sortedActivities.map(([act, data], i) => {
                 const pct = totalMins > 0 ? (data.totalMinutes / totalMins) * 100 : 0;
                 const col = actColors[i % actColors.length];
-                return `<div title="${act}: ${pct.toFixed(1)}%" style="width:${pct}%;background:${col}" class="h-full first:rounded-l-full last:rounded-r-full"></div>`;
+                return `<div title="${escapeHtml(act)}: ${pct.toFixed(1)}%" style="width:${pct}%;background:${col}" class="h-full first:rounded-l-full last:rounded-r-full"></div>`;
             }).join('');
 
             actBreakdown.innerHTML = sortedActivities.map(([act, data], i) => {
@@ -730,7 +748,7 @@ function renderPublicAnalytics() {
                     <div class="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                         <div class="flex items-center gap-3">
                             <span class="w-3 h-3 rounded-full shrink-0" style="background:${col}"></span>
-                            <span class="font-bold text-white text-sm">${act}</span>
+                            <span class="font-bold text-white text-sm">${escapeHtml(act)}</span>
                         </div>
                         <div class="flex items-center gap-4 text-xs text-gray-400">
                             <span>${data.count}x</span>
@@ -855,12 +873,12 @@ function exportDashboardData() {
             `${hh}:${mm}`
         ];
     });
-    const csvContent = [headers, ...rows].map(e => e.join(sep)).join("\n");
+    const csvContent = [headers, ...rows].map(e => e.map(v => csvField(v, sep)).join(sep)).join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `historico_completo_quadras_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `historico_completo_quadras_${localDateStamp()}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
     showToast("Histórico completo exportado com sucesso!", "success");
 }
@@ -887,12 +905,12 @@ function exportWithdrawals() {
             tempoFila, (w.players || []).length
         ];
     });
-    const csvContent = [headers, ...rows].map(e => e.join(sep)).join("\n");
+    const csvContent = [headers, ...rows].map(e => e.map(v => csvField(v, sep)).join(sep)).join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `desistencias_fila_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `desistencias_fila_${localDateStamp()}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
     showToast("Relatório de desistências exportado!", "success");
 }
@@ -1057,10 +1075,12 @@ function exportOccupancyComplete() {
         byWeekday[d.getDay()].dayCount++;
     }
     state.history.forEach(h => {
-        if (!h.date) return;
-        const parts = h.date.split('/');
-        if (parts.length !== 3) return;
-        const entryDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+        // parseDate() constrói a data no fuso local — `new Date("aaaa-mm-dd")`
+        // é interpretado como UTC meia-noite, que em Brasília (UTC-3) cai no
+        // dia anterior às 21h, deslocando o dia da semana e podendo excluir
+        // indevidamente registros do primeiro dia do intervalo.
+        const entryDate = parseDate(h.date);
+        if (!entryDate) return;
         if (entryDate >= startDate && entryDate <= endDate) {
             const wd = entryDate.getDay();
             byWeekday[wd].total++;
@@ -1074,12 +1094,12 @@ function exportOccupancyComplete() {
     });
     allContent.push([""]);
 
-    const csvContent = allContent.map(e => e.join(sep)).join("\n");
+    const csvContent = allContent.map(e => e.map(v => csvField(v, sep)).join(sep)).join("\n");
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `relatorio_completo_ocupacao_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `relatorio_completo_ocupacao_${localDateStamp()}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
     showToast("Relatório completo exportado com sucesso!", "success");
 }

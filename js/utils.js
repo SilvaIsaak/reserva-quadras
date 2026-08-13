@@ -13,12 +13,41 @@ function hideModal(id) {
     el.style.display = '';
 }
 
+// --- Escape de HTML: nomes de jogador/sócio, títulos, observações e nomes de
+// quadra são texto livre digitado pelo usuário (ou importado via JSON) e vão
+// parar direto em innerHTML pelo app inteiro — sem isso, um nome como
+// "<img src=x onerror=alert(1)>" executa para qualquer um que veja a tela.
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Escape para valores interpolados dentro de onclick="fn('${valor}')": o
+// atributo é decodificado como HTML antes de virar código JS, então um
+// escapeHtml comum não impede a fuga da string JS (aspas simples continuam
+// aspas simples depois de decodificadas). Escapa primeiro para sobreviver
+// como literal de string JS, depois para sobreviver como valor de atributo.
+function escapeJsAttr(str) {
+    return String(str ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 // --- Safe LocalStorage Wrapper ---
 
 
 // Mobile Menu Toggle
 function toggleMobileMenu() {
     const menu = document.getElementById('mobile-menu');
+    if (!menu) return;
     const isHidden = menu.classList.contains('hidden');
     
     if (isHidden) {
@@ -48,7 +77,7 @@ function showToast(msg, type='info') {
     const toast = document.createElement('div');
     const bg = type === 'error' ? 'bg-red-600' : (type === 'warning' ? 'bg-orange-500' : 'bg-indigo-600');
     toast.className = `${bg} text-white px-8 py-4 rounded-2xl shadow-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 mb-3`;
-    toast.innerHTML = `<i class="fas fa-bell"></i> ${msg}`;
+    toast.innerHTML = `<i class="fas fa-bell"></i> ${escapeHtml(msg)}`;
     container.appendChild(toast);
     gsap.from(toast, { x: 100, opacity: 0, duration: 0.5 });
     setTimeout(() => { gsap.to(toast, { x: 100, opacity: 0, duration: 0.5, onComplete: () => toast.remove() }); }, 4000);
@@ -166,7 +195,7 @@ function showToastWithAction(msg, actionLabel, onAction) {
     // fora do escopo original: as variáveis capturadas (nextGroup, court) não
     // existiam mais e o botão falhava com ReferenceError.
     div.innerHTML = `
-        <span class="flex-1 text-sm font-bold text-white">${msg}</span>
+        <span class="flex-1 text-sm font-bold text-white">${escapeHtml(msg)}</span>
         <button data-role="confirm"
             class="shrink-0 px-4 py-2 rounded-xl bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest hover:brightness-110 transition-all">
             ${actionLabel}

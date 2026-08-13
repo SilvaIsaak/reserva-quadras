@@ -168,10 +168,13 @@ function render() {
         const colorEl = document.getElementById('set-color');
         const membersEl = document.getElementById('set-members');
         const performanceEl = document.getElementById('set-performance');
-        if(clubNameEl) clubNameEl.value = state.settings.clubName;
-        if(courtsEl) courtsEl.value = state.courts.join(', ');
-        if(colorEl) colorEl.value = state.settings.primaryColor;
-        if(membersEl) membersEl.value = JSON.stringify(state.members, null, 4);
+        // render() roda a cada evento de tempo real (ex.: alguém libera uma
+        // quadra em outro dispositivo) — sem o check de foco, digitar em
+        // Configurações enquanto isso acontece apaga o que já foi digitado.
+        if(clubNameEl && document.activeElement !== clubNameEl) clubNameEl.value = state.settings.clubName;
+        if(courtsEl && document.activeElement !== courtsEl) courtsEl.value = state.courts.join(', ');
+        if(colorEl && document.activeElement !== colorEl) colorEl.value = state.settings.primaryColor;
+        if(membersEl && document.activeElement !== membersEl) membersEl.value = JSON.stringify(state.members, null, 4);
         if(performanceEl) performanceEl.checked = state.settings.performanceMode;
         renderRequested = false;
     });
@@ -431,8 +434,8 @@ function renderActivity() {
                 <i class="fas ${r.type ? 'fa-history' : 'fa-check-circle'}"></i>
             </div>
             <div class="flex-1">
-                <p class="text-sm font-bold text-white">${r.players[0]}${r.players.length > 1 ? ' + ' + (r.players.length - 1) : ''}</p>
-                <p class="text-[10px] text-gray-500 uppercase font-black">${r.court} • ${r.startTime} - ${r.endTime}</p>
+                <p class="text-sm font-bold text-white">${escapeHtml(r.players[0])}${r.players.length > 1 ? ' + ' + (r.players.length - 1) : ''}</p>
+                <p class="text-[10px] text-gray-500 uppercase font-black">${escapeHtml(r.court)} • ${r.startTime} - ${r.endTime}</p>
             </div>
             <div class="text-right">
                 <p class="text-[9px] font-black text-gray-600 uppercase tracking-tighter">${r.date}</p>
@@ -471,30 +474,30 @@ function renderAdmin() {
             : '';
 
         return `
-            <div class="court-card ${stateClass} court-drop-zone" data-court="${c}">
+            <div class="court-card ${stateClass} court-drop-zone" data-court="${escapeHtml(c)}">
                 <div class="court-card-head">
                     <div>
                         <span class="court-card-eyebrow">Quadra</span>
-                        <span class="court-card-name">${c}</span>
+                        <span class="court-card-name">${escapeHtml(c)}</span>
                     </div>
                     <div class="court-card-actions">
-                        ${b ? `<button onclick="openEditModal('${c}')" class="court-card-icon-btn" title="Editar"><i class="fas fa-pen text-[10px]"></i></button>` : ''}
-                        <button onclick="openAdminAction('${c}')" class="court-card-icon-btn" title="Status manual">
+                        ${b ? `<button onclick="openEditModal('${escapeJsAttr(c)}')" class="court-card-icon-btn" title="Editar"><i class="fas fa-pen text-[10px]"></i></button>` : ''}
+                        <button onclick="openAdminAction('${escapeJsAttr(c)}')" class="court-card-icon-btn" title="Status manual">
                             <i class="fas fa-cog text-[10px]"></i>
                         </button>
                     </div>
                 </div>
                 <div class="flex-1 pointer-events-none flex flex-col gap-2">
                     ${b ? `
-                        <p class="court-card-activity">${b.type === 'rain' ? 'CHUVA' : b.type === 'lesson' ? 'AULA' : (b.type ? b.type.toUpperCase() : b.activity)}</p>
+                        <p class="court-card-activity">${b.type === 'rain' ? 'CHUVA' : b.type === 'lesson' ? 'AULA' : (b.type ? b.type.toUpperCase() : escapeHtml(b.activity))}</p>
                         <div class="court-card-players">
-                            ${b.players.map(p => `<div class="truncate">${p}</div>`).join('')}
+                            ${b.players.map(p => `<div class="truncate">${escapeHtml(p)}</div>`).join('')}
                         </div>
                         <div class="court-card-meta data-mono">
                             <span>Insc <strong>${b.registrationTime || '--:--'}</strong></span>
                             <span>Início <strong>${b.startTime || '--:--'}</strong></span>
                         </div>
-                        ${b.observation ? `<p class="text-[10px] font-semibold text-[var(--clay)] border-l-2 border-[var(--clay-border)] pl-2 py-0.5 italic">"${b.observation}"</p>` : ''}
+                        ${b.observation ? `<p class="text-[10px] font-semibold text-[var(--clay)] border-l-2 border-[var(--clay-border)] pl-2 py-0.5 italic">"${escapeHtml(b.observation)}"</p>` : ''}
                         ${ignoredBadge}
                         ${transitionBadge}
                     ` : `
@@ -504,14 +507,14 @@ function renderAdmin() {
                 </div>
                 <div class="court-card-actions-row pointer-events-auto">
                     ${b ? (!b.startTime ? `
-                        <button onclick="startMatch('${c}')" class="court-card-btn court-card-btn--start">Iniciar</button>
-                        <button onclick="releaseCourt('${c}')" class="court-card-btn court-card-btn--end">Encerrar</button>
-                        <button onclick="openUndoModal('${c}')" class="court-card-btn court-card-btn--undo"><i class="fas fa-rotate-left"></i> Reverter</button>
+                        <button onclick="startMatch('${escapeJsAttr(c)}')" class="court-card-btn court-card-btn--start">Iniciar</button>
+                        <button onclick="releaseCourt('${escapeJsAttr(c)}')" class="court-card-btn court-card-btn--end">Encerrar</button>
+                        <button onclick="openUndoModal('${escapeJsAttr(c)}')" class="court-card-btn court-card-btn--undo"><i class="fas fa-rotate-left"></i> Reverter</button>
                     ` : `
-                        <button onclick="releaseCourt('${c}')" class="court-card-btn court-card-btn--end" style="grid-column: 1 / -1;">Encerrar</button>
-                        <button onclick="openUndoModal('${c}')" class="court-card-btn court-card-btn--undo"><i class="fas fa-rotate-left"></i> Reverter</button>
+                        <button onclick="releaseCourt('${escapeJsAttr(c)}')" class="court-card-btn court-card-btn--end" style="grid-column: 1 / -1;">Encerrar</button>
+                        <button onclick="openUndoModal('${escapeJsAttr(c)}')" class="court-card-btn court-card-btn--undo"><i class="fas fa-rotate-left"></i> Reverter</button>
                     `) : `
-                        <button onclick="openUndoModal('${c}')" class="court-card-btn court-card-btn--undo"><i class="fas fa-rotate-left"></i> Reverter último</button>
+                        <button onclick="openUndoModal('${escapeJsAttr(c)}')" class="court-card-btn court-card-btn--undo"><i class="fas fa-rotate-left"></i> Reverter último</button>
                     `}
                 </div>
             </div>
@@ -521,7 +524,7 @@ function renderAdmin() {
     // Manter waitlist render (reaproveitado do original)
     const adminWait = document.getElementById('admin-waitlist');
     if (!adminWait) return;
-    adminWait.innerHTML = state.waitlist.map((item, i) => `<div class="queue-item" data-id="${item.id}"><span class="queue-position data-mono">${i+1}</span><div class="queue-body"><div class="queue-players">${item.players.map(p => `<div class="truncate">${p}</div>`).join('')}</div><div class="queue-meta"><span>${item.activity}</span><span class="data-mono">${item.registrationTime}</span>${item.repeat ? '<span class="px-2 py-0.5 bg-red-500/20 text-red-300 rounded-md border border-red-500/30">Sem preferência</span>' : ''}</div></div><div class="queue-actions"><button onclick="openWaitlistEditModal('${item.id}')" class="court-card-icon-btn" title="Editar Grupo"><i class="fas fa-pen text-[10px]"></i></button><button onclick="openMoveModal('${item.id}')" class="court-card-icon-btn" title="Mover para Quadra"><i class="fas fa-right-left text-[10px]"></i></button><button onclick="removeFromWaitlist('${item.id}')" class="court-card-icon-btn" style="color:#f87171" title="Remover da Fila"><i class="fas fa-trash-can text-[10px]"></i></button></div></div>`).join('') || '<div class="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">Nenhum grupo aguardando</div>';
+    adminWait.innerHTML = state.waitlist.map((item, i) => `<div class="queue-item" data-id="${item.id}"><span class="queue-position data-mono">${i+1}</span><div class="queue-body"><div class="queue-players">${item.players.map(p => `<div class="truncate">${escapeHtml(p)}</div>`).join('')}</div><div class="queue-meta"><span>${escapeHtml(item.activity)}</span><span class="data-mono">${item.registrationTime}</span>${item.repeat ? '<span class="px-2 py-0.5 bg-red-500/20 text-red-300 rounded-md border border-red-500/30">Sem preferência</span>' : ''}</div></div><div class="queue-actions"><button onclick="openWaitlistEditModal('${item.id}')" class="court-card-icon-btn" title="Editar Grupo"><i class="fas fa-pen text-[10px]"></i></button><button onclick="openMoveModal('${item.id}')" class="court-card-icon-btn" title="Mover para Quadra"><i class="fas fa-right-left text-[10px]"></i></button><button onclick="removeFromWaitlist('${item.id}')" class="court-card-icon-btn" style="color:#f87171" title="Remover da Fila"><i class="fas fa-trash-can text-[10px]"></i></button></div></div>`).join('') || '<div class="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">Nenhum grupo aguardando</div>';
     initSortable();
 }
 
@@ -545,7 +548,7 @@ function renderHomeScoreboard() {
             }
         }
         return `<div class="scoreboard-chip ${stateClass}" onclick="switchView('admin')">
-            <div class="chip-name">${c}</div>
+            <div class="chip-name">${escapeHtml(c)}</div>
             <div class="chip-time">${time}</div>
             <div class="chip-label">${label}</div>
         </div>`;

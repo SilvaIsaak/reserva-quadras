@@ -31,7 +31,7 @@ function renderMembersList() {
     const filtered = search
         ? entries.filter(([title, names]) =>
             title.toLowerCase().includes(search) ||
-            (Array.isArray(names) ? names.some(n => n.toLowerCase().includes(search)) : String(names).toLowerCase().includes(search))
+            (Array.isArray(names) ? names.some(n => String(n).toLowerCase().includes(search)) : String(names).toLowerCase().includes(search))
           )
         : entries;
 
@@ -48,17 +48,17 @@ function renderMembersList() {
         <div class="glass-card p-4 rounded-2xl border border-white/10">
             <div class="flex justify-between items-start gap-2">
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-indigo-400 uppercase tracking-widest">Título ${title}</p>
+                    <p class="text-xs font-black text-indigo-400 uppercase tracking-widest">Título ${escapeHtml(title)}</p>
                     <div class="mt-2 space-y-1">
                         ${nameList.map((name, idx) => `
                         <div class="flex items-center justify-between gap-2 py-1 border-b border-white/5 last:border-0">
-                            <span class="text-sm text-white font-bold truncate">${name}</span>
-                            <button onclick="removeMemberName('${title}', ${idx})" class="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-[10px]"><i class="fas fa-times"></i></button>
+                            <span class="text-sm text-white font-bold truncate">${escapeHtml(name)}</span>
+                            <button onclick="removeMemberName('${escapeJsAttr(title)}', ${idx})" class="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-[10px]"><i class="fas fa-times"></i></button>
                         </div>`).join('')}
                     </div>
-                    <button onclick="addNameToTitle('${title}')" class="mt-2 text-[9px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-all flex items-center gap-1"><i class="fas fa-plus"></i> Adicionar nome</button>
+                    <button onclick="addNameToTitle('${escapeJsAttr(title)}')" class="mt-2 text-[9px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-all flex items-center gap-1"><i class="fas fa-plus"></i> Adicionar nome</button>
                 </div>
-                <button onclick="deleteMemberTitle('${title}')" class="shrink-0 w-7 h-7 flex items-center justify-center rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs border border-red-500/20"><i class="fas fa-trash"></i></button>
+                <button onclick="deleteMemberTitle('${escapeJsAttr(title)}')" class="shrink-0 w-7 h-7 flex items-center justify-center rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs border border-red-500/20"><i class="fas fa-trash"></i></button>
             </div>
         </div>`;
     }).join('');

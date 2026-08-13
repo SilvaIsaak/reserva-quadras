@@ -21,7 +21,7 @@ function syncMembersFromAdmin() {
     updateSettingsSilent();
 }
 
-function updateSettings() {
+async function updateSettings() {
     try {
         const membersEl = document.getElementById('set-members');
         if (membersEl) {
@@ -65,10 +65,15 @@ function updateSettings() {
     }
 
     saveLocal();
-    dbSaveSettings({ clubName: state.settings.clubName, primaryColor: state.settings.primaryColor });
-    if (courtsInput) dbSyncCourts(state.courts);
-    dbSyncMembersFull(state.members);
-    showToast("Configurações salvas com sucesso!", "success");
+    // Aguardar os 3 saves e só anunciar sucesso se todos confirmarem — antes o
+    // toast de sucesso aparecia na hora, mesmo que a gravação na nuvem falhasse
+    // (o único aviso de erro vinha depois, silenciosamente, via _showSyncError).
+    const results = await Promise.all([
+        dbSaveSettings({ clubName: state.settings.clubName, primaryColor: state.settings.primaryColor }),
+        courtsInput ? dbSyncCourts(state.courts) : Promise.resolve(true),
+        dbSyncMembersFull(state.members)
+    ]);
+    if (results.every(Boolean)) showToast("Configurações salvas com sucesso!", "success");
     render();
 }
 

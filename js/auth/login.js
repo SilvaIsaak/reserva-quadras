@@ -191,7 +191,12 @@ function checkPwdMatch() {
 
 async function savePassword() {
     const newPwd = document.getElementById('pwd-new').value;
-    if (!pwdTargetUser || newPwd.length < 4) return;
+    const confirmPwd = document.getElementById('pwd-confirm').value;
+    if (!pwdTargetUser) return;
+    if (newPwd.length < 4 || newPwd !== confirmPwd) {
+        showToast('Verifique a senha: mínimo de 4 caracteres e confirmação igual.', 'warning');
+        return;
+    }
 
     const { error } = await supabaseClient.auth.updateUser({ password: newPwd });
     if (error) {

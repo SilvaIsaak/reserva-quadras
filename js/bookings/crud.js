@@ -157,6 +157,13 @@ function closeStaleActivities() {
     const lastActive = storage.get('last_active_date');
 
     if (lastActive && lastActive !== todayDate && (state.bookings.length > 0 || state.waitlist.length > 0)) {
+        // No boot, restoreSession() ainda pode não ter restaurado currentUser
+        // (é assíncrona) — closeAllActivities já se protege com esse mesmo
+        // guard e vira um no-op nesse caso. Sem retornar aqui antes de marcar
+        // "last_active_date", esse dia ficava marcado como processado mesmo
+        // sem ter fechado nada, e o fechamento retroativo nunca mais era
+        // tentado de novo (o setInterval seguinte já vê lastActive === todayDate).
+        if (currentUser !== 'esportes') return;
         lastClosingDate = ''; // liberar o guard "já encerramos hoje" para a data anterior
         closeAllActivities({ force: true, dateStr: lastActive });
     }
@@ -578,7 +585,7 @@ function initSortable() {
                 }).filter(Boolean);
                 state.waitlist = newOrder;
                 saveLocal();
-                dbUpsertSessionsBulk(newOrder.map((w, i) => { w.queuePosition = i; return { id: w.id, queue_position: i }; }));
+                dbUpsertSessionsBulk(newOrder.map((w, i) => { w.queuePosition = i; return { id: w.id, status: 'waitlist', queue_position: i }; }));
             }
         });
     }
@@ -628,7 +635,7 @@ function initSortable() {
                         if (bookingB) {
                             bookingB.court = courtFrom;
                             showToast(`Jogos trocados entre ${courtFrom} e ${court}`, "info");
-                            dbUpsertSessionsBulk([{ id: bookingA.id, court_id: getCourtId(court) }, { id: bookingB.id, court_id: getCourtId(courtFrom) }]);
+                            dbUpsertSessionsBulk([{ id: bookingA.id, status: 'court', court_id: getCourtId(court) }, { id: bookingB.id, status: 'court', court_id: getCourtId(courtFrom) }]);
                         } else {
                             showToast(`Jogo movido para a ${court}`, "info");
                             dbUpdateSession(bookingA.id, { court });
@@ -694,17 +701,17 @@ function revertHistoryEntry(historyId) {
     if (courtOccupied) {
         if (!confirm(`A ${targetCourt} está ocupada. Deseja mover para a fila de espera?`)) return;
         state.history.splice(idx, 1);
-        const { date, weekday, endTime, playDuration, waitDuration, activity, encerradoPor, ...waitEntry } = entry;
+        const { date, weekday, endTime, playDuration, waitDuration, encerradoPor, ...waitEntry } = entry;
         waitEntry.registrationTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         delete waitEntry.startTime;
         state.waitlist.unshift(waitEntry);
         state.waitlist.forEach((w, i) => { w.queuePosition = i; });
         dbUpdateSession(entry.id, { status: 'waitlist', registrationTime: waitEntry.registrationTime, startTime: null, queuePosition: 0 })
-            .then(() => dbUpsertSessionsBulk(state.waitlist.slice(1).map(w => ({ id: w.id, queue_position: w.queuePosition }))));
+            .then(() => dbUpsertSessionsBulk(state.waitlist.slice(1).map(w => ({ id: w.id, status: 'waitlist', queue_position: w.queuePosition }))));
         showToast(`${entry.players[0]} movido para a fila!`, "info");
     } else {
         state.history.splice(idx, 1);
-        const { date, weekday, endTime, playDuration, waitDuration, activity, encerradoPor, ...restoredBooking } = entry;
+        const { date, weekday, endTime, playDuration, waitDuration, encerradoPor, ...restoredBooking } = entry;
         // Restaurar como booking ativo com dados originais
         state.bookings.push(restoredBooking);
         dbUpdateSession(entry.id, { status: 'court', court: targetCourt });
