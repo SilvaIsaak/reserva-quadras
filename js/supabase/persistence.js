@@ -74,6 +74,14 @@ function setConnectionState(online) {
 // mesmo que o cliente peça um .range() maior — só pedir um intervalo maior
 // não resolve. A única forma confiável de trazer tudo é paginar de verdade:
 // buscar em blocos e continuar até a página vir menor que o tamanho pedido.
+//
+// Crítico: sem uma ordenação que NUNCA empata, o Postgres não garante a
+// mesma ordem entre a consulta da página 1 e a da página 2 — com milhares
+// de linhas empatadas (ex.: session_players.position repete 0,1,2,3 em
+// milhares de sessões), isso fazia linhas inteiras desaparecerem em
+// silêncio entre uma página e outra (o "só aparece 1 jogador" era exatamente
+// isso). `id` é único por linha, então ordenar por ele sempre garante uma
+// ordem estável e cobertura completa.
 async function fetchAllRows(table, applyQuery) {
     const pageSize = 1000;
     let all = [];
@@ -81,7 +89,7 @@ async function fetchAllRows(table, applyQuery) {
     while (true) {
         let q = supabaseClient.from(table).select('*');
         if (applyQuery) q = applyQuery(q);
-        const { data, error } = await q.range(offset, offset + pageSize - 1);
+        const { data, error } = await q.order('id').range(offset, offset + pageSize - 1);
         if (error) return { data: null, error };
         all = all.concat(data || []);
         if (!data || data.length < pageSize) break;
