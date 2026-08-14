@@ -83,6 +83,21 @@ create policy "members: esportes write" on members for all using (is_esportes())
 create policy "member_names: staff read" on member_names for select using (is_staff());
 create policy "member_names: esportes write" on member_names for all using (is_esportes()) with check (is_esportes());
 
+-- Mesmo motivo de sync_session_players (ver comentário lá): substitui os
+-- nomes de um sócio inteiro dentro de UMA transação, para nenhum outro
+-- cliente conseguir ler um estado intermediário "sem nomes".
+create or replace function sync_member_names(p_member_id uuid, p_names text[])
+returns void
+language plpgsql
+as $$
+begin
+  delete from member_names where member_id = p_member_id;
+  insert into member_names (member_id, name)
+  select p_member_id, n from unnest(p_names) as n;
+end;
+$$;
+grant execute on function sync_member_names(uuid, text[]) to authenticated;
+
 -- ------------------------------------------------------------
 -- sessions: unifica bookings/waitlist/withdrawals/history —
 -- promover ou arquivar passa a ser um UPDATE de status, não uma
@@ -142,6 +157,33 @@ create index session_players_session_idx on session_players(session_id);
 alter table session_players enable row level security;
 create policy "session_players: staff read" on session_players for select using (is_staff());
 create policy "session_players: esportes write" on session_players for all using (is_esportes()) with check (is_esportes());
+
+-- Substitui os jogadores de uma sessão inteira dentro de UMA transação.
+-- Crítico: o cliente antes fazia DELETE e depois INSERT como duas chamadas
+-- HTTP separadas — entre uma e outra o banco ficava com a sessão realmente
+-- sem nenhum jogador por uma fração de segundo. Como o tempo real recarrega
+-- e SUBSTITUI o estado local a cada mudança (debounce de 80ms), uma consulta
+-- de outro dispositivo (ou do próprio, reagindo ao seu evento de DELETE)
+-- podia acontecer exatamente nessa janela e "apagar" os jogadores que
+-- acabaram de ser cadastrados. Função roda como SECURITY INVOKER (padrão) —
+-- respeita as mesmas policies de RLS acima, sem elevar privilégio.
+create or replace function sync_session_players(p_session_id uuid, p_rows jsonb)
+returns void
+language plpgsql
+as $$
+begin
+  delete from session_players where session_id = p_session_id;
+  insert into session_players (session_id, name_snapshot, title_snapshot, member_id, position)
+  select
+    p_session_id,
+    r->>'name_snapshot',
+    r->>'title_snapshot',
+    (r->>'member_id')::uuid,
+    (r->>'position')::int
+  from jsonb_array_elements(p_rows) as r;
+end;
+$$;
+grant execute on function sync_session_players(uuid, jsonb) to authenticated;
 
 -- ------------------------------------------------------------
 -- club_settings: linha única (singleton)
@@ -257,4 +299,44 @@ alter publication supabase_realtime add table sessions, session_players, courts,
 -- from courts c
 -- left join sessions s on s.court_id = c.id and s.status = 'court'
 -- order by c.sort_order;
+-- ------------------------------------------------------------
+
+-- ------------------------------------------------------------
+-- MIGRAÇÃO — projeto já existente (rode uma vez no SQL Editor):
+-- corrige a causa raiz do bug em que jogadores cadastrados "somem" —
+-- o app fazia DELETE + INSERT como duas chamadas separadas, deixando a
+-- sessão momentaneamente sem nenhum jogador no banco; o tempo real podia
+-- ler exatamente esse instante e apagar o cadastro que acabou de ser feito.
+-- Sem rodar isto, o app volta a chamar sync_session_players/sync_member_names
+-- que ainda não existem no banco e as escritas de jogador/sócio vão falhar.
+--
+-- create or replace function sync_session_players(p_session_id uuid, p_rows jsonb)
+-- returns void
+-- language plpgsql
+-- as $$
+-- begin
+--   delete from session_players where session_id = p_session_id;
+--   insert into session_players (session_id, name_snapshot, title_snapshot, member_id, position)
+--   select
+--     p_session_id,
+--     r->>'name_snapshot',
+--     r->>'title_snapshot',
+--     (r->>'member_id')::uuid,
+--     (r->>'position')::int
+--   from jsonb_array_elements(p_rows) as r;
+-- end;
+-- $$;
+-- grant execute on function sync_session_players(uuid, jsonb) to authenticated;
+--
+-- create or replace function sync_member_names(p_member_id uuid, p_names text[])
+-- returns void
+-- language plpgsql
+-- as $$
+-- begin
+--   delete from member_names where member_id = p_member_id;
+--   insert into member_names (member_id, name)
+--   select p_member_id, n from unnest(p_names) as n;
+-- end;
+-- $$;
+-- grant execute on function sync_member_names(uuid, text[]) to authenticated;
 -- ------------------------------------------------------------

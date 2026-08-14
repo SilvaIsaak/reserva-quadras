@@ -393,17 +393,19 @@ function _showSyncError(err) {
     showToast("Falha ao salvar na nuvem — dados gravados apenas neste dispositivo.", "error");
 }
 
+// Substitui os jogadores da sessão via RPC (uma transação no banco) — nunca
+// DELETE e INSERT como duas chamadas separadas. Entre as duas, a sessão
+// ficava genuinamente sem jogador nenhum no banco por uma fração de segundo,
+// e o tempo real (que recarrega e SUBSTITUI o estado local a cada mudança)
+// podia capturar exatamente essa janela e "apagar" o cadastro recém-feito.
+// Ver função sync_session_players em supabase/schema.sql.
 async function _syncSessionPlayers(sessionId, players, titles) {
-    const { error: delError } = await supabaseClient.from('session_players').delete().eq('session_id', sessionId);
-    if (delError) throw delError;
     const rows = (players || []).map((name, i) => ({
-        session_id: sessionId, name_snapshot: name, title_snapshot: (titles && titles[i]) || null,
+        name_snapshot: name, title_snapshot: (titles && titles[i]) || null,
         member_id: (titles && memberIdByTitle[titles[i]]) || null, position: i
     }));
-    if (rows.length > 0) {
-        const { error: insError } = await supabaseClient.from('session_players').insert(rows);
-        if (insError) throw insError;
-    }
+    const { error } = await supabaseClient.rpc('sync_session_players', { p_session_id: sessionId, p_rows: rows });
+    if (error) throw error;
 }
 
 function _localToSessionRow(local, status) {
@@ -505,13 +507,10 @@ async function dbUpsertMember(title, names) {
             memberId = data.id;
             memberIdByTitle[title] = memberId;
         }
-        const { error: delError } = await supabaseClient.from('member_names').delete().eq('member_id', memberId);
-        if (delError) throw delError;
-        const rows = (names || []).map(name => ({ member_id: memberId, name }));
-        if (rows.length > 0) {
-            const { error: insError } = await supabaseClient.from('member_names').insert(rows);
-            if (insError) throw insError;
-        }
+        // RPC (uma transação) — mesmo motivo de _syncSessionPlayers acima:
+        // nunca DELETE + INSERT como duas chamadas separadas.
+        const { error } = await supabaseClient.rpc('sync_member_names', { p_member_id: memberId, p_names: names || [] });
+        if (error) throw error;
     } catch (err) { _showSyncError(err); }
 }
 
