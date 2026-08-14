@@ -185,7 +185,10 @@ function updateDashboard() {
     const todayStr = getTodayDate();
     const todayHistory = state.history.filter(h => h.date === todayStr);
     const todayWithdrawals = state.withdrawals.filter(w => w.withdrawnDate === todayStr);
-    const occupied = state.bookings.filter(b => !b.type || b.type === 'lesson').length;
+    // Contar quadras únicas, não reservas — nada impede hoje duas reservas
+    // apontarem para a mesma quadra (sync duplicada/corrida entre dispositivos),
+    // e nesse caso .length contava as duas, passando do total real de quadras.
+    const occupied = new Set(state.bookings.filter(b => !b.type || b.type === 'lesson').map(b => b.court)).size;
     const wait = state.waitlist.length;
     const total = todayHistory.length;
     const withdrawals = todayWithdrawals.length;

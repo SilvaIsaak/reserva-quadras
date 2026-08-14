@@ -263,7 +263,12 @@ function applyFixedSchedules() {
                 observation: "Agenda Fixa"
             };
             state.bookings.push(lessonBooking);
-            dbInsertSession(lessonBooking, 'court');
+            // Outro dispositivo pode ter criado uma reserva manual para essa
+            // quadra bem nesse instante — se o banco recusar (sessions_court_active_unique),
+            // desfaz a aula automática local em vez de deixá-la "fantasma" só aqui.
+            dbInsertSession(lessonBooking, 'court').then(id => {
+                if (!id) { state.bookings = state.bookings.filter(b => b !== lessonBooking); saveLocal(); render(); }
+            });
         } else if (fixedStatus === "free" && existingBooking && existingBooking.type === "lesson") {
             if (existingBooking.observation !== "Agenda Fixa") continue;
             const endTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });

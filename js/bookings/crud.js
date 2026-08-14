@@ -28,9 +28,13 @@ function closeAllActivities(options) {
     
     // Encerrar todas as atividades
     const endTime = "22:00";
-    
-    // Iterar por todas as reservas ativas
-    const bookingsToClose = [...state.bookings];
+
+    // No fechamento retroativo (opts.snapshot), usar o retrato capturado em
+    // closeStaleActivities — não state.bookings ao vivo, que a essa altura já
+    // pode ter sido sobrescrito pela carga do Supabase com as reservas de HOJE
+    // (ver comentário em closeStaleActivities). Sem isso, reservas recém-criadas
+    // eram arquivadas com a data antiga e desapareciam do quadro.
+    const bookingsToClose = opts.snapshot ? opts.snapshot.bookings : [...state.bookings];
     for (const booking of bookingsToClose) {
         let playDuration = 0;
         if (booking.startTime) {
@@ -68,11 +72,14 @@ function closeAllActivities(options) {
         });
     }
 
-    // Limpar todas as reservas
-    state.bookings = [];
+    // Remover só as reservas que foram de fato arquivadas — com snapshot,
+    // isso preserva qualquer reserva nova que tenha entrado em state.bookings
+    // depois que o retrato foi capturado (nunca zera o array inteiro nesse caso).
+    const closedIds = new Set(bookingsToClose.map(b => b.id));
+    state.bookings = state.bookings.filter(b => !closedIds.has(b.id));
 
     // Mover fila de espera para desistências
-    const waitlistToClose = [...state.waitlist];
+    const waitlistToClose = opts.snapshot ? opts.snapshot.waitlist : [...state.waitlist];
     for (const entry of waitlistToClose) {
         state.withdrawals.push({
             ...entry,
@@ -80,7 +87,8 @@ function closeAllActivities(options) {
             withdrawnDate: currentDate
         });
     }
-    state.waitlist = [];
+    const closedWaitlistIds = new Set(waitlistToClose.map(w => w.id));
+    state.waitlist = state.waitlist.filter(w => !closedWaitlistIds.has(w.id));
 
     // Atualizar a última data de encerramento
     lastClosingDate = currentDate;
@@ -148,6 +156,15 @@ function archiveBookingToHistory(booking, reason, endTimeStr) {
     });
 }
 
+// Retrato das reservas/fila "de ontem" capturado na primeira detecção de
+// virada de dia — antes que restoreSession()/loginAs() completem e a carga do
+// Supabase sobrescreva state.bookings com as reservas de HOJE. closeStaleActivities
+// tenta de novo a cada 30s até o login confirmar currentUser; sem congelar esse
+// retrato, a tentativa que finalmente executa usaria state.bookings já atualizado
+// e arquivaria reservas recém-criadas (de hoje) sob a data antiga, apagando-as
+// do quadro assim que a recepção começasse a inserir dados.
+let _staleActivitiesSnapshot = null;
+
 // Fechamento retroativo. O encerramento das 22:00 só roda com a página aberta —
 // se a recepção fechasse o navegador às 21h, na manhã seguinte as quadras
 // apareciam ocupadas com os jogadores do dia anterior (e ficavam assim o dia
@@ -156,16 +173,22 @@ function closeStaleActivities() {
     const todayDate = getTodayDate();
     const lastActive = storage.get('last_active_date');
 
-    if (lastActive && lastActive !== todayDate && (state.bookings.length > 0 || state.waitlist.length > 0)) {
-        // No boot, restoreSession() ainda pode não ter restaurado currentUser
-        // (é assíncrona) — closeAllActivities já se protege com esse mesmo
-        // guard e vira um no-op nesse caso. Sem retornar aqui antes de marcar
-        // "last_active_date", esse dia ficava marcado como processado mesmo
-        // sem ter fechado nada, e o fechamento retroativo nunca mais era
-        // tentado de novo (o setInterval seguinte já vê lastActive === todayDate).
-        if (currentUser !== 'esportes') return;
-        lastClosingDate = ''; // liberar o guard "já encerramos hoje" para a data anterior
-        closeAllActivities({ force: true, dateStr: lastActive });
+    if (lastActive && lastActive !== todayDate) {
+        if (!_staleActivitiesSnapshot) {
+            _staleActivitiesSnapshot = { bookings: state.bookings.slice(), waitlist: state.waitlist.slice() };
+        }
+        if (_staleActivitiesSnapshot.bookings.length > 0 || _staleActivitiesSnapshot.waitlist.length > 0) {
+            // No boot, restoreSession() ainda pode não ter restaurado currentUser
+            // (é assíncrona) — closeAllActivities já se protege com esse mesmo
+            // guard e vira um no-op nesse caso. Sem retornar aqui antes de marcar
+            // "last_active_date", esse dia ficava marcado como processado mesmo
+            // sem ter fechado nada, e o fechamento retroativo nunca mais era
+            // tentado de novo (o setInterval seguinte já vê lastActive === todayDate).
+            if (currentUser !== 'esportes') return;
+            lastClosingDate = ''; // liberar o guard "já encerramos hoje" para a data anterior
+            closeAllActivities({ force: true, dateStr: lastActive, snapshot: _staleActivitiesSnapshot });
+        }
+        _staleActivitiesSnapshot = null;
     }
 
     storage.set('last_active_date', todayDate);
@@ -294,7 +317,10 @@ function searchMember(idx, title, prefix = '') {
     }
     const select = document.getElementById(nameId);
     if(names && names.length > 0) {
-        select.innerHTML = '<option value="">Selecionar Nome...</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+        // Sócios com nome real primeiro, "Convidado N" por último — mantém a
+        // ordem original dentro de cada grupo (sort é estável).
+        const sortedNames = names.slice().sort((a, b) => (/^convidado/i.test(a) ? 1 : 0) - (/^convidado/i.test(b) ? 1 : 0));
+        select.innerHTML = '<option value="">Selecionar Nome...</option>' + sortedNames.map(n => `<option value="${n}">${n}</option>`).join('');
         updateActivityOptions(prefix);
     } else {
         select.innerHTML = '<option value="">Título não encontrado</option>';
@@ -366,12 +392,15 @@ function openEditModal(court) {
     const b = state.bookings.find(book => book.court === court);
     if(b) {
         const container = document.getElementById('edit-player-rows');
-        container.innerHTML = '';
+        // Montar as 4 linhas numa única atribuição a innerHTML: escrever
+        // dentro do loop com `+=` reserializa o container a cada volta, o que
+        // apaga o select.value já setado nas linhas anteriores (select.value é
+        // uma propriedade do DOM, não um atributo HTML — não sobrevive a essa
+        // reserialização). Por isso editar sempre pedia pra reinserir tudo.
+        let rowsHtml = '';
         for(let i=0; i<4; i++) {
             const title = (b.titles && b.titles[i]) || '';
-            const player = (b.players && b.players[i]) || '';
-            
-            container.innerHTML += `
+            rowsHtml += `
                 <div class="grid grid-cols-2 gap-4">
                     <input type="text" id="edit-p-title-${i}" value="${title}" placeholder="Título" oninput="searchMember(${i}, this.value, 'edit')" class="input-glass p-4 rounded-2xl text-sm font-bold">
                     <select id="edit-p-name-${i}" onchange="updateActivityOptions('edit')" class="input-glass p-4 rounded-2xl text-sm font-bold">
@@ -379,7 +408,11 @@ function openEditModal(court) {
                     </select>
                 </div>
             `;
-            
+        }
+        container.innerHTML = rowsHtml;
+        for(let i=0; i<4; i++) {
+            const title = (b.titles && b.titles[i]) || '';
+            const player = (b.players && b.players[i]) || '';
             if(title) {
                 searchMember(i, title, 'edit');
                 const select = document.getElementById(`edit-p-name-${i}`);
@@ -523,7 +556,7 @@ if(bookingForm) {
     };
 }
 
-function processEntry(entry) {
+async function processEntry(entry) {
     const court = entry.court;
     const occupied = state.bookings.find(b => b.court === court);
     if(occupied || entry.repeat) {
@@ -531,7 +564,9 @@ function processEntry(entry) {
         state.waitlist.push(entry);
         if(entry.repeat) showToast("Sócio já jogou hoje: Fim da fila.", "warning");
         else showToast("Quadra ocupada: Movido para a fila.", "info");
-        saveLocal(); dbInsertSession(entry, 'waitlist');
+        saveLocal();
+        const id = await dbInsertSession(entry, 'waitlist');
+        if (!id) { state.waitlist = state.waitlist.filter(w => w !== entry); saveLocal(); render(); }
     } else {
         entry.startTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         if(entry.activity === "Bate-bola") {
@@ -541,7 +576,19 @@ function processEntry(entry) {
         }
         state.bookings.push(entry);
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        saveLocal(); dbInsertSession(entry, 'court');
+        saveLocal();
+        const id = await dbInsertSession(entry, 'court');
+        if (!id) {
+            // Banco recusou (ex.: outro dispositivo ocupou a mesma quadra
+            // por uma fração de segundo antes, via sessions_court_active_unique)
+            // — desfaz a reserva otimista local e busca o estado real. Sem
+            // isso, ela ficava "fantasma" só neste aparelho até o próximo F5
+            // apagá-la sem explicação nenhuma.
+            state.bookings = state.bookings.filter(b => b !== entry);
+            saveLocal();
+            showToast(`A ${court} já foi ocupada por outro dispositivo — atualizando...`, "warning");
+            await loadStateIncremental('sessions');
+        }
     }
 }
 

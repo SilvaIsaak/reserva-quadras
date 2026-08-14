@@ -362,7 +362,8 @@ async function loadPublicState() {
         state.bookings = (viewRes.data || []).filter(r => r.session_id).map(r => ({
             id: r.session_id, court: r.court_name, type: r.type, activity: r.activity,
             startTime: r.start_time, endTime: r.end_time, observation: r.observation,
-            players: r.type ? [] : ['Quadra em uso'] // nunca inclui nome de sócio na TV pública
+            // título de sócio nunca vem na view pública — só o nome mesmo.
+            players: r.type ? [] : ((r.player_names && r.player_names.length) ? r.player_names : ['Quadra em uso'])
         }));
         state.waitlist = (waitRes.data || []).map(r => ({
             id: r.session_id, registrationTime: r.registration_time, activity: r.activity,

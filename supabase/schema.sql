@@ -114,6 +114,12 @@ create table sessions (
 );
 create index sessions_status_idx on sessions(status);
 create index sessions_court_idx on sessions(court_id);
+-- Impede duas sessões 'court' (ativas) na mesma quadra — sem isso, dois
+-- dispositivos podiam reservar a mesma quadra quase ao mesmo tempo (cada um
+-- via um retrato local desatualizado de "livre") e o banco aceitava as duas,
+-- inflando "Quadras Ocupadas" com uma reserva fantasma que nunca aparece no
+-- quadro (a UI só mostra a primeira reserva de cada quadra).
+create unique index sessions_court_active_unique on sessions(court_id) where status = 'court' and court_id is not null;
 
 create trigger sessions_set_updated_at
   before update on sessions
@@ -159,7 +165,8 @@ create policy "club_settings: esportes write" on club_settings for update using 
 
 -- ------------------------------------------------------------
 -- Views públicas — o que a tela "TV do saguão" (perfil publico,
--- sem login) pode ver. Nunca expõem nome/título de sócio.
+-- sem login) pode ver. Mostra o nome dos jogadores, mas nunca o
+-- título de sócio (esse continua staff-only).
 -- ------------------------------------------------------------
 create view v_public_courts as
 select
@@ -172,7 +179,9 @@ select
   s.activity,
   s.start_time,
   s.end_time,
-  s.observation
+  s.observation,
+  (select array_agg(sp.name_snapshot order by sp.position)
+     from session_players sp where sp.session_id = s.id) as player_names
 from courts c
 left join sessions s on s.court_id = c.id and s.status = 'court'
 order by c.sort_order;
@@ -224,4 +233,28 @@ alter publication supabase_realtime add table sessions, session_players, courts,
 -- de aula entre dispositivos (antes só ficava no localStorage).
 --
 -- alter table club_settings add column if not exists fixed_schedules jsonb;
+-- ------------------------------------------------------------
+
+-- ------------------------------------------------------------
+-- MIGRAÇÃO — projeto já existente (rode uma vez no SQL Editor):
+-- faz a TV pública passar a mostrar o nome dos jogadores (o título
+-- de sócio continua staff-only).
+--
+-- create or replace view v_public_courts as
+-- select
+--   c.id as court_id,
+--   c.name as court_name,
+--   c.sort_order,
+--   s.id as session_id,
+--   s.status,
+--   s.type,
+--   s.activity,
+--   s.start_time,
+--   s.end_time,
+--   s.observation,
+--   (select array_agg(sp.name_snapshot order by sp.position)
+--      from session_players sp where sp.session_id = s.id) as player_names
+-- from courts c
+-- left join sessions s on s.court_id = c.id and s.status = 'court'
+-- order by c.sort_order;
 -- ------------------------------------------------------------

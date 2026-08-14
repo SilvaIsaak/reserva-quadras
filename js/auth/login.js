@@ -34,6 +34,21 @@ async function confirmPin() {
     }
 }
 
+// Self-service para quando nenhuma máquina está logada (várias máquinas usam
+// a mesma conta "esportes"/"diretora" simultaneamente — sem isso, uma senha
+// perdida só podia ser recuperada por quem já estivesse logado em outro lugar).
+async function requestPasswordReset() {
+    if (!supabaseClient) {
+        showToast("Supabase não está configurado — veja SUPABASE_URL/SUPABASE_ANON_KEY no topo do arquivo.", "error");
+        return;
+    }
+    const role = selectedUserForLogin;
+    const email = STAFF_EMAILS[role];
+    if (!email) return;
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+    showToast(error ? `Erro ao enviar e-mail: ${error.message}` : `E-mail de redefinição enviado para ${email}.`, error ? 'error' : 'success');
+}
+
 function backToUsers() {
     selectedUserForLogin = null;
     document.getElementById('pin-area').classList.add('hidden');
