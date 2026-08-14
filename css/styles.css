@@ -552,7 +552,7 @@ main {
 
 .lesson-schedule-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr auto;
     gap: 0.5rem;
     align-items: center;
     padding: 0.5rem;
@@ -566,8 +566,7 @@ main {
         grid-template-columns: 1fr 1fr;
         gap: 0.4rem;
     }
-    .lesson-schedule-row .row-status { grid-column: 1 / -2; }
-    .lesson-schedule-row .row-delete { grid-column: -1; grid-row: 1; }
+    .lesson-schedule-row .row-delete { grid-column: 1 / -1; }
 }
 [data-theme="light"] .lesson-schedule-row {
     background: rgba(15,23,42,0.03);

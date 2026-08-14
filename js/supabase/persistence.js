@@ -152,6 +152,16 @@ async function loadSettings() {
         state.settings.theme = res.data.theme;
         state.settings.performanceMode = res.data.performance_mode;
         state.manuallyReleasedLessons = res.data.manually_released_lessons || [];
+        // null = grade padrão embutida no cliente (FIXED_SCHEDULES em config.js)
+        // segue valendo. Objeto salvo pelo editor de horários é a fonte de
+        // verdade a partir daqui — mutação in-place porque FIXED_SCHEDULES é
+        // `const` e outros arquivos (automation.js/editor.js) guardam a
+        // referência ao mesmo objeto.
+        if (res.data.fixed_schedules && typeof res.data.fixed_schedules === 'object') {
+            Object.keys(FIXED_SCHEDULES).forEach(k => delete FIXED_SCHEDULES[k]);
+            Object.assign(FIXED_SCHEDULES, res.data.fixed_schedules);
+            storage.set('rq_pro_fixed_schedules', FIXED_SCHEDULES);
+        }
     }
     return true;
 }
@@ -560,6 +570,7 @@ async function dbSaveSettings(patch) {
         if ('theme' in patch) row.theme = patch.theme;
         if ('performanceMode' in patch) row.performance_mode = patch.performanceMode;
         if ('manuallyReleasedLessons' in patch) row.manually_released_lessons = patch.manuallyReleasedLessons;
+        if ('fixedSchedules' in patch) row.fixed_schedules = patch.fixedSchedules;
         const { error } = await supabaseClient.from('club_settings').update(row).eq('id', 1);
         if (error) throw error;
         return true;

@@ -81,70 +81,83 @@ function renderLessonWeeklyPreview() {
     container.innerHTML = html || '<div class="col-span-full text-center text-gray-500 py-8">Nenhum horário configurado</div>';
 }
 
+// Quadras com o accordion aberto — preservado entre re-renders, já que agora
+// cada edição de campo (horário/dia/status) refaz o HTML inteiro do editor.
+const _openLessonCourts = new Set();
+
 /**
  * Renderiza o editor de horários de aulas por quadra
  */
 function renderLessonScheduleEditor() {
     const container = document.getElementById('lesson-schedule-editor');
     if (!container) return;
-    
+
     let html = '';
-    
+
     state.courts.forEach(court => {
         const schedules = FIXED_SCHEDULES[court] || [];
-        const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-        const dayNumbers = [1, 2, 3, 4, 5, 6, 0];
-        const dayMap = {0:'Dom', 1:'Seg', 2:'Ter', 3:'Qua', 4:'Qui', 5:'Sex', 6:'Sáb'};
-        
+        const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']; // índice = getDay()
+        const isOpen = _openLessonCourts.has(court);
+        const cAttr = escapeJsAttr(court);
+
         html += `
             <div class="glass-card p-4 rounded-xl space-y-3">
-                <div class="lesson-court-header" onclick="toggleLessonCourtEditor('${court}')">
+                <div class="lesson-court-header" onclick="toggleLessonCourtEditor('${cAttr}')">
                     <div class="flex items-center gap-2">
                         <i class="fas fa-table-tennis-paddle-ball text-indigo-400"></i>
-                        <span class="font-bold text-white">${court}</span>
+                        <span class="font-bold text-white">${escapeHtml(court)}</span>
                     </div>
-                    <i class="fas fa-chevron-down text-gray-400 transition-transform" id="chevron-${court}"></i>
+                    <i class="fas fa-chevron-down text-gray-400 transition-transform" id="chevron-${escapeHtml(court)}" style="transform: rotate(${isOpen ? '180' : '0'}deg)"></i>
                 </div>
-                <div id="editor-${court}" class="hidden space-y-2">
+                <div id="editor-${escapeHtml(court)}" class="${isOpen ? '' : 'hidden'} space-y-2">
         `;
-        
+
         schedules.forEach((schedule, idx) => {
-            const daysList = schedule.days.map(d => dayMap[d] || d).join(', ');
-            const statusLabel = schedule.status === 'lesson' ? 'AULA' : 'LIVRE';
-            const statusColor = schedule.status === 'lesson' ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20';
-            
+            const dayToggles = dayLabels.map((label, d) => {
+                const active = schedule.days.includes(d);
+                return `<button type="button" onclick="toggleLessonScheduleDay('${cAttr}', ${idx}, ${d})"
+                    class="w-8 h-8 rounded-lg text-[10px] font-bold border transition-all ${active ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white/5 text-gray-400 border-white/10'}">${label}</button>`;
+            }).join('');
+
             html += `
                 <div class="lesson-schedule-row">
-                    <div class="flex-1">
-                        <div class="text-[10px] text-gray-500 uppercase font-bold">Dias</div>
-                        <div class="text-sm font-bold text-white">${daysList}</div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Dias</div>
+                        <div class="flex gap-1 flex-wrap">${dayToggles}</div>
                     </div>
-                    <div class="flex-1">
-                        <div class="text-[10px] text-gray-500 uppercase font-bold">Horário</div>
-                        <div class="text-sm font-bold text-white">${schedule.start} - ${schedule.end}</div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Início</div>
+                        <input type="time" value="${schedule.start}" onchange="updateLessonScheduleField('${cAttr}', ${idx}, 'start', this.value)" class="input-glass p-2 rounded-lg text-sm font-bold">
                     </div>
-                    <div class="flex-1">
-                        <div class="text-[10px] text-gray-500 uppercase font-bold">Status</div>
-                        <span class="inline-block px-2 py-1 rounded-lg text-[10px] font-bold border ${statusColor}">${statusLabel}</span>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Fim</div>
+                        <input type="time" value="${schedule.end}" onchange="updateLessonScheduleField('${cAttr}', ${idx}, 'end', this.value)" class="input-glass p-2 rounded-lg text-sm font-bold">
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Status</div>
+                        <select onchange="updateLessonScheduleField('${cAttr}', ${idx}, 'status', this.value)" class="input-glass p-2 rounded-lg text-sm font-bold">
+                            <option value="lesson" ${schedule.status === 'lesson' ? 'selected' : ''}>AULA</option>
+                            <option value="free" ${schedule.status === 'free' ? 'selected' : ''}>LIVRE</option>
+                        </select>
                     </div>
                     <div class="row-delete">
-                        <button onclick="removeLessonSchedule('${court}', ${idx})" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/20">
+                        <button onclick="removeLessonSchedule('${cAttr}', ${idx})" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/20">
                             <i class="fas fa-trash-can text-xs"></i>
                         </button>
                     </div>
                 </div>
             `;
         });
-        
+
         html += `
-                    <button onclick="addLessonSchedule('${court}')" class="w-full py-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all">
+                    <button onclick="addLessonSchedule('${cAttr}')" class="w-full py-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all">
                         <i class="fas fa-plus mr-2"></i>Adicionar Período
                     </button>
                 </div>
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
@@ -152,15 +165,30 @@ function renderLessonScheduleEditor() {
  * Alterna a visibilidade do editor de uma quadra
  */
 function toggleLessonCourtEditor(court) {
-    const editor = document.getElementById(`editor-${court}`);
-    const chevron = document.getElementById(`chevron-${court}`);
-    
-    if (editor) {
-        editor.classList.toggle('hidden');
-        if (chevron) {
-            chevron.style.transform = editor.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-        }
-    }
+    if (_openLessonCourts.has(court)) _openLessonCourts.delete(court);
+    else _openLessonCourts.add(court);
+    renderLessonScheduleEditor();
+}
+
+/**
+ * Atualiza um campo (start/end/status) de um período existente
+ */
+function updateLessonScheduleField(court, index, field, value) {
+    if (!FIXED_SCHEDULES[court] || !FIXED_SCHEDULES[court][index]) return;
+    FIXED_SCHEDULES[court][index][field] = value;
+    renderLessonScheduleEditor();
+}
+
+/**
+ * Liga/desliga um dia da semana (0=Dom...6=Sáb) num período existente
+ */
+function toggleLessonScheduleDay(court, index, day) {
+    const schedule = FIXED_SCHEDULES[court] && FIXED_SCHEDULES[court][index];
+    if (!schedule) return;
+    const pos = schedule.days.indexOf(day);
+    if (pos === -1) schedule.days.push(day); else schedule.days.splice(pos, 1);
+    schedule.days.sort((a, b) => a - b);
+    renderLessonScheduleEditor();
 }
 
 /**
@@ -168,11 +196,11 @@ function toggleLessonCourtEditor(court) {
  */
 function removeLessonSchedule(court, index) {
     if (!confirm('Deseja remover este período?')) return;
-    
+
     if (FIXED_SCHEDULES[court] && FIXED_SCHEDULES[court][index]) {
         FIXED_SCHEDULES[court].splice(index, 1);
         renderLessonScheduleEditor();
-        showToast('Período removido!', 'success');
+        showToast('Período removido! Clique em Salvar para confirmar.', 'info');
     }
 }
 
@@ -186,30 +214,36 @@ function addLessonSchedule(court) {
         end: '12:00',
         status: 'lesson'
     };
-    
+
     if (!FIXED_SCHEDULES[court]) FIXED_SCHEDULES[court] = [];
     FIXED_SCHEDULES[court].push(newSchedule);
+    _openLessonCourts.add(court);
     renderLessonScheduleEditor();
-    showToast('Período adicionado! Configure os horários.', 'info');
+    showToast('Período adicionado! Ajuste dias/horário e clique em Salvar.', 'info');
 }
 
 /**
- * Salva as configurações de horários de aulas
+ * Salva as configurações de horários de aulas — localStorage (cache
+ * imediato deste dispositivo) e Supabase (fonte de verdade multi-dispositivo,
+ * lida de volta por loadSettings() em cada reconexão/tempo real).
  */
-function saveFixedSchedules() {
-    storage.set('rq_pro_fixed_schedules', JSON.stringify(FIXED_SCHEDULES));
+async function saveFixedSchedules() {
+    storage.set('rq_pro_fixed_schedules', FIXED_SCHEDULES);
+    const ok = await dbSaveSettings({ fixedSchedules: FIXED_SCHEDULES });
     applyFixedSchedules();
     render();
-    showToast('Horários de aulas salvos com sucesso!', 'success');
+    if (ok) showToast('Horários de aulas salvos com sucesso!', 'success');
 }
 
 /**
- * Reseta os horários para os padrões
+ * Reseta os horários para os padrões (embutidos em config.js) neste e em
+ * todos os outros dispositivos.
  */
-function resetFixedSchedules() {
+async function resetFixedSchedules() {
     if (!confirm('Deseja resetar todos os horários para os padrões?')) return;
-    
+
     storage.remove('rq_pro_fixed_schedules');
+    await dbSaveSettings({ fixedSchedules: null });
     location.reload();
 }
 

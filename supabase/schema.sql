@@ -146,7 +146,10 @@ create table club_settings (
   primary_color text not null default '#6366f1',
   theme text not null default 'dark',
   performance_mode boolean not null default true,
-  manually_released_lessons jsonb not null default '[]'::jsonb
+  manually_released_lessons jsonb not null default '[]'::jsonb,
+  -- null = usar a grade padrão embutida no cliente (js/config.js); um objeto
+  -- aqui é a grade personalizada salva pelo editor de horários de aula.
+  fixed_schedules jsonb
 );
 insert into club_settings (id) values (1);
 
@@ -213,4 +216,12 @@ alter publication supabase_realtime add table sessions, session_players, courts,
 --
 -- insert into courts (name, sort_order) values
 --   ('Quadra 1', 1), ('Quadra 2', 2), ('Quadra Rápida', 3);
+-- ------------------------------------------------------------
+
+-- ------------------------------------------------------------
+-- MIGRAÇÃO — projeto já existente (rode uma vez no SQL Editor):
+-- adiciona a coluna que passou a sincronizar a grade de horários
+-- de aula entre dispositivos (antes só ficava no localStorage).
+--
+-- alter table club_settings add column if not exists fixed_schedules jsonb;
 -- ------------------------------------------------------------
