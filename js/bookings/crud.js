@@ -486,7 +486,7 @@ if(memberForm) {
     };
 }
 
-function setCourtStatus(type) {
+async function setCourtStatus(type) {
     const obs = document.getElementById('admin-observation').value.trim();
     if(type === 'free') {
         // Se for liberar, usar a função releaseCourt que adiciona ao histórico
@@ -512,9 +512,20 @@ function setCourtStatus(type) {
         };
         state.bookings.push(statusBooking);
         saveLocal();
-        dbInsertSession(statusBooking, 'court').then(render);
         render();
-        showToast(`Status da quadra atualizado!`, 'success');
+        const id = await dbInsertSession(statusBooking, 'court');
+        if (!id) {
+            // Outro dispositivo já tinha uma sessão ativa nessa quadra
+            // (sessions_court_active_unique) — desfaz o status local fantasma
+            // e busca o estado real, em vez de deixar a UI divergente do banco.
+            state.bookings = state.bookings.filter(b => b !== statusBooking);
+            saveLocal();
+            showToast(`A ${_court} já está ocupada por outro dispositivo — atualizando...`, "warning");
+            await loadStateIncremental('sessions');
+            render();
+        } else {
+            showToast(`Status da quadra atualizado!`, 'success');
+        }
     }
     closeAdminModal();
 }
